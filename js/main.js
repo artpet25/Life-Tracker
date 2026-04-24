@@ -172,86 +172,136 @@ document.getElementById('fabBtn').addEventListener('click', openSettings);
 
 // ── Today view ────────────────────────────────────────────────────────────────
 
-const HABIT_ICON_PRESETS = [
-  { bg: '#e8f0fe', emoji: '🎯' },
-  { bg: '#e0f7f4', emoji: '🌈' },
-  { bg: '#f3e8ff', emoji: '💪' },
-  { bg: '#e8f5e9', emoji: '🌿' },
-  { bg: '#fff3e0', emoji: '🔥' },
-  { bg: '#fce4ec', emoji: '❤️' },
-  { bg: '#e3f2fd', emoji: '💧' },
-  { bg: '#fffde7', emoji: '⭐' },
-  { bg: '#fbe9e7', emoji: '🏃' },
-  { bg: '#e8eaf6', emoji: '📚' },
-  { bg: '#e0f2f1', emoji: '🧘' },
-  { bg: '#f9fbe7', emoji: '☀️' },
-];
+const PILLAR_COLORS = {
+  body:   { bg: '#e8f0ff', color: '#0a84ff' },
+  mind:   { bg: '#f3e8ff', color: '#bf5af2' },
+  spirit: { bg: '#fff3e0', color: '#ff9f0a' },
+};
 
-function getHabitIcon(name, index) {
+function getHabitVisual(name, index) {
   const n = (name || '').toLowerCase();
-  if (n.includes('exerc') || n.includes('sport') || n.includes('gym') || n.includes('muscl') || n.includes('fit')) return { bg: '#f3e8ff', emoji: '💪' };
-  if (n.includes('stretch') || n.includes('yoga') || n.includes('médit') || n.includes('meditat') || n.includes('respir')) return { bg: '#e0f2f1', emoji: '🧘' };
-  if (n.includes('calme') || n.includes('calm') || n.includes('zen') || n.includes('stress')) return { bg: '#e0f7f4', emoji: '🌈' };
-  if (n.includes('plaint') || n.includes('complain') || n.includes('moins se')) return { bg: '#e8f0fe', emoji: '🚫' };
-  if (n.includes('lire') || n.includes('read') || n.includes('livre') || n.includes('book')) return { bg: '#e8eaf6', emoji: '📚' };
-  if (n.includes('eau') || n.includes('water') || n.includes('hydrat')) return { bg: '#e3f2fd', emoji: '💧' };
-  if (n.includes('dorm') || n.includes('sleep') || n.includes('nuit') || n.includes('coucher')) return { bg: '#fce4ec', emoji: '😴' };
-  if (n.includes('march') || n.includes('walk') || n.includes('courir') || n.includes('run') || n.includes('jogg')) return { bg: '#fbe9e7', emoji: '🏃' };
-  if (n.includes('fruit') || n.includes('légume') || n.includes('manger') || n.includes('nutrit')) return { bg: '#e8f5e9', emoji: '🥗' };
-  return HABIT_ICON_PRESETS[index % HABIT_ICON_PRESETS.length];
+  if (/douche|shower/.test(n))                   return { pillar: 'body',   emoji: '🚿' };
+  if (/run|courir|jogg/.test(n))                  return { pillar: 'body',   emoji: '🏃' };
+  if (/jolt/.test(n))                             return { pillar: 'body',   emoji: '⚡' };
+  if (/étirement|etirement|stretch/.test(n))      return { pillar: 'body',   emoji: '🤸' };
+  if (/respir|breath/.test(n))                    return { pillar: 'body',   emoji: '🌬️' };
+  if (/sommeil|sleep|dorm|nuit/.test(n))          return { pillar: 'body',   emoji: '😴' };
+  if (/alimentation|manger|nutrit|repas/.test(n)) return { pillar: 'body',   emoji: '🥗' };
+  if (/fruit|légume/.test(n))                     return { pillar: 'body',   emoji: '🥗' };
+  if (/sexe|sex/.test(n))                         return { pillar: 'body',   emoji: '🔥' };
+  if (/exerc|sport|gym|muscl|fit/.test(n))        return { pillar: 'body',   emoji: '💪' };
+  if (/march|walk/.test(n))                       return { pillar: 'body',   emoji: '🚶' };
+  if (/eau|water|hydrat/.test(n))                 return { pillar: 'body',   emoji: '💧' };
+  if (/amour|love|couple|relation/.test(n))       return { pillar: 'mind',   emoji: '❤️' };
+  if (/travail|work|boulot|projet/.test(n))       return { pillar: 'mind',   emoji: '💼' };
+  if (/loisir|hobby|jeu|game/.test(n))            return { pillar: 'mind',   emoji: '🎮' };
+  if (/lire|lecture|read|livre|book/.test(n))     return { pillar: 'mind',   emoji: '📚' };
+  if (/créat|creat|art/.test(n))                  return { pillar: 'mind',   emoji: '🎨' };
+  if (/médit|meditat/.test(n))                    return { pillar: 'spirit', emoji: '🧘' };
+  if (/yoga/.test(n))                             return { pillar: 'spirit', emoji: '🧘' };
+  if (/bienveill|kindn/.test(n))                  return { pillar: 'spirit', emoji: '🌸' };
+  if (/inspir/.test(n))                           return { pillar: 'spirit', emoji: '✨' };
+  if (/famille|family/.test(n))                   return { pillar: 'spirit', emoji: '👨‍👩‍👧' };
+  if (/ami|friend|proch/.test(n))                 return { pillar: 'spirit', emoji: '👥' };
+  const defaults = [
+    { pillar: 'body',   emoji: '🎯' },
+    { pillar: 'mind',   emoji: '⭐' },
+    { pillar: 'spirit', emoji: '☀️' },
+    { pillar: 'body',   emoji: '🔥' },
+    { pillar: 'mind',   emoji: '💡' },
+    { pillar: 'spirit', emoji: '🌈' },
+  ];
+  return defaults[index % defaults.length];
 }
 
-function habitStatus(val) {
-  if (val === 1) return { text: '✓ Fait', cls: 'done' };
-  if (val === 2) return { text: '✗ Raté', cls: 'fail' };
-  return { text: "Aujourd'hui", cls: '' };
+function habitItemHTML(h, todayDay, isDone) {
+  const v = getHabitVisual(h.name, h.i);
+  const c = PILLAR_COLORS[v.pillar];
+  const pillLabel = v.pillar === 'body' ? 'Body' : v.pillar === 'mind' ? 'Mind' : 'Spirit';
+  return `<div class="habit-today-item" data-habit="${h.i}" data-day="${todayDay}">
+    <button class="habit-icon-btn${isDone ? ' done-icon' : ''}" data-habit="${h.i}" style="background:${isDone ? '#e8f5e9' : c.bg}">${isDone ? '✓' : v.emoji}</button>
+    <span class="habit-today-name${isDone ? ' done-name' : ''}">${escapeAttr(h.name)}</span>
+    <span class="pillar-tag pillar-${v.pillar}">${pillLabel}</span>
+  </div>`;
 }
+
+let doneSectionOpen = false;
 
 function renderTodayHabits() {
-  const todayEl = document.getElementById('habitsListToday');
-  const countBadge = document.getElementById('habitsCountBadge');
-  if (!todayEl) return;
+  const pendingSection = document.getElementById('pendingSection');
+  const doneSection = document.getElementById('doneSection');
+  if (!pendingSection) return;
 
   const now = new Date();
   const todayDay = now.getDate();
   const isCurrentMonth = now.getFullYear() === state.year && now.getMonth() === state.month;
 
   const activeHabits = state.habits.map((name, i) => ({ name, i })).filter(h => h.name.trim());
-  if (countBadge) countBadge.textContent = activeHabits.length;
 
   if (!activeHabits.length) {
-    todayEl.innerHTML = '<div style="text-align:center;padding:24px 0;color:#8e8e93;font-size:15px;">Aucune habitude.<br>Appuie sur + pour commencer.</div>';
+    pendingSection.innerHTML = '<div class="card"><div style="text-align:center;padding:24px 0;color:#8e8e93;font-size:15px;">Aucune habitude.<br>Appuie sur + pour commencer.</div></div>';
+    if (doneSection) doneSection.innerHTML = '';
     return;
   }
 
-  todayEl.innerHTML = activeHabits.map(({ name, i }) => {
-    const icon = getHabitIcon(name, i);
-    const val = isCurrentMonth && state.data[todayDay] ? (state.data[todayDay][i] || 0) : 0;
-    const { text, cls } = habitStatus(val);
-    return `<div class="habit-today-item" data-habit="${i}" data-day="${todayDay}">
-      <div class="habit-icon" style="background:${icon.bg}">${icon.emoji}</div>
-      <span class="habit-today-name">${escapeAttr(name)}</span>
-      <span class="habit-today-status ${cls}">${text}</span>
-    </div>`;
-  }).join('');
+  const pending = [], done = [];
+  activeHabits.forEach(h => {
+    const val = isCurrentMonth && state.data[todayDay] ? (state.data[todayDay][h.i] || 0) : 0;
+    (val === 1 ? done : pending).push(h);
+  });
 
-  todayEl.querySelectorAll('.habit-today-item').forEach(el => {
-    el.addEventListener('pointerdown', e => {
+  pendingSection.innerHTML = `<div class="card">
+    <div class="card-header">
+      <span class="card-title">Habitudes</span>
+      <span class="section-badge badge-pending">${pending.length}</span>
+    </div>
+    ${pending.length === 0
+      ? '<div class="all-done-msg">🎉 Tout fait !</div>'
+      : pending.map(h => habitItemHTML(h, todayDay, false)).join('')}
+  </div>`;
+
+  if (doneSection) {
+    doneSection.innerHTML = done.length === 0 ? '' : `<div class="card">
+      <div class="card-header done-section-header" id="doneSectionHeader">
+        <span class="card-title">Done</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="section-badge badge-done">${done.length}</span>
+          <span class="collapse-arrow${doneSectionOpen ? ' open' : ''}" id="collapseArrow">›</span>
+        </div>
+      </div>
+      <div class="collapsible-body${doneSectionOpen ? ' open' : ''}" id="doneList">
+        ${done.map(h => habitItemHTML(h, todayDay, true)).join('')}
+      </div>
+    </div>`;
+
+    const hdr = document.getElementById('doneSectionHeader');
+    if (hdr) hdr.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      doneSectionOpen = !doneSectionOpen;
+      const arrow = document.getElementById('collapseArrow');
+      const body = document.getElementById('doneList');
+      if (arrow) arrow.classList.toggle('open', doneSectionOpen);
+      if (body) body.classList.toggle('open', doneSectionOpen);
+    });
+  }
+
+  document.querySelectorAll('.habit-icon-btn').forEach(btn => {
+    btn.addEventListener('pointerdown', e => {
       if (!isCurrentMonth) return;
       e.preventDefault();
-      const day = parseInt(el.dataset.day, 10);
-      const habit = parseInt(el.dataset.habit, 10);
-      if (!state.data[day]) state.data[day] = {};
-      const cur = state.data[day][habit] || 0;
-      const next = (cur + 1) % 3;
-      if (next === 0) delete state.data[day][habit]; else state.data[day][habit] = next;
-      if (Object.keys(state.data[day] || {}).length === 0) delete state.data[day];
-      // Update DOM immediately for instant feedback
-      const statusEl = el.querySelector('.habit-today-status');
-      const { text, cls } = habitStatus(next);
-      statusEl.textContent = text;
-      statusEl.className = 'habit-today-status ' + cls;
-      saveMonth();
+      e.stopPropagation();
+      btn.classList.add('animating');
+      btn.addEventListener('animationend', () => {
+        const habitIdx = parseInt(btn.dataset.habit, 10);
+        if (!state.data[todayDay]) state.data[todayDay] = {};
+        const cur = state.data[todayDay][habitIdx] || 0;
+        const next = cur === 1 ? 0 : 1;
+        if (next === 0) delete state.data[todayDay][habitIdx];
+        else state.data[todayDay][habitIdx] = next;
+        if (Object.keys(state.data[todayDay] || {}).length === 0) delete state.data[todayDay];
+        saveMonth();
+        renderTodayHabits();
+      }, { once: true });
     });
   });
 }

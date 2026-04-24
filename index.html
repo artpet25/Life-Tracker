@@ -36,14 +36,28 @@
   .card-count { display: flex; align-items: center; gap: 5px; color: #8e8e93; font-size: 16px; }
 
   /* Today habit items */
-  .habit-today-item { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid #f2f2f7; cursor: pointer; user-select: none; -webkit-user-select: none; }
+  @keyframes habitCheck { 0%{transform:scale(1)} 30%{transform:scale(1.45)} 60%{transform:scale(0.82)} 80%{transform:scale(1.1)} 100%{transform:scale(1)} }
+  .habit-today-item { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid #f2f2f7; user-select: none; -webkit-user-select: none; }
   .habit-today-item:last-child { border-bottom: none; }
-  .habit-today-item:active { opacity: 0.7; }
-  .habit-icon { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .habit-icon-btn { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; border: none; cursor: pointer; transition: transform 0.1s; }
+  .habit-icon-btn:active { transform: scale(0.88); }
+  .habit-icon-btn.animating { animation: habitCheck 0.38s ease; }
+  .habit-icon-btn.done-icon { font-size: 20px; font-weight: 700; color: #34c759; }
   .habit-today-name { flex: 1; font-size: 16px; font-weight: 500; color: #1c1c1e; }
-  .habit-today-status { font-size: 14px; font-weight: 500; color: #5856d6; white-space: nowrap; }
-  .habit-today-status.done { color: #34c759; }
-  .habit-today-status.fail { color: #ff3b30; }
+  .habit-today-name.done-name { color: #8e8e93; text-decoration: line-through; }
+  .pillar-tag { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+  .pillar-body { background: #e8f0ff; color: #0a84ff; }
+  .pillar-mind { background: #f3e8ff; color: #bf5af2; }
+  .pillar-spirit { background: #fff3e0; color: #ff9f0a; }
+  .section-badge { font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+  .badge-pending { background: #f2f2f7; color: #8e8e93; }
+  .badge-done { background: #e8f5e9; color: #34c759; }
+  .done-section-header { cursor: pointer; }
+  .collapse-arrow { font-size: 20px; color: #8e8e93; display: inline-block; transition: transform 0.25s; transform: rotate(90deg); line-height: 1; }
+  .collapse-arrow.open { transform: rotate(-90deg); }
+  .collapsible-body { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
+  .collapsible-body.open { max-height: 2000px; }
+  .all-done-msg { text-align: center; padding: 18px 0 4px; font-size: 15px; color: #34c759; font-weight: 600; }
 
   /* FAB */
   .fab { position: fixed; bottom: 96px; right: 20px; width: 58px; height: 58px; background: #5856d6; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; line-height: 1; box-shadow: 0 4px 20px rgba(88,86,214,0.45); border: none; cursor: pointer; z-index: 40; }
@@ -195,15 +209,8 @@
 
   <!-- Today panel (default) -->
   <div class="tab-panel active" id="panel-today">
-    <div class="section">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Habitude</span>
-          <span class="card-count"><span id="habitsCountBadge">—</span> ↓</span>
-        </div>
-        <div id="habitsListToday"></div>
-      </div>
-    </div>
+    <div id="pendingSection" class="section"></div>
+    <div id="doneSection" class="section"></div>
   </div>
 
   <!-- Calendar panel -->
