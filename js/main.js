@@ -61,7 +61,7 @@ function render() {
     const bandIdx = bandCount - 1 - h;
     const bottomRadius = INNER_R + bandIdx * bandW;
     const yLineSvg = CENTER - bottomRadius;
-    svg += `<line x1="0" y1="${yLineSvg}" x2="${CENTER}" y2="${yLineSvg}" stroke="#1a1f1a" stroke-width="1.2" />`;
+    svg += `<line x1="0" y1="${yLineSvg}" x2="${CENTER}" y2="${yLineSvg}" stroke="#e5e5ea" stroke-width="1.2" />`;
   }
 
   for (let d = 1; d <= days; d++) {
@@ -103,7 +103,7 @@ function render() {
 
   const centerHtml = `<div class="center-month-label"><div class="lbl">MONTH / YEAR</div><div class="mo">${MONTHS_FR[state.month]}</div><div class="yr">${state.year}</div>${totalPossible > 0 ? `<div class="pct">${pct}%</div>` : ''}</div>`;
 
-  app.innerHTML = `<div class="ring-container">${svg}${habitsHtml}${centerHtml}</div><div class="legend"><div class="legend-item"><span class="legend-swatch" style="background:#5c8a4a"></span>Fait</div><div class="legend-item"><span class="legend-swatch" style="background:#c44545"></span>Raté</div><div class="legend-item"><span class="legend-swatch" style="background:#fafaf3"></span>Vide</div></div>`;
+  app.innerHTML = `<div class="ring-container">${svg}${habitsHtml}${centerHtml}</div><div class="legend"><div class="legend-item"><span class="legend-swatch" style="background:#34c759"></span>Fait</div><div class="legend-item"><span class="legend-swatch" style="background:#ff3b30"></span>Raté</div><div class="legend-item"><span class="legend-swatch" style="background:#f9f9f9;border:1px solid #e5e5ea"></span>Vide</div></div>`;
 
   app.querySelectorAll('.cell').forEach(el => {
     if (el.classList.contains('cell-future') || el.classList.contains('cell-future-weekend')) return;
@@ -155,7 +155,7 @@ async function saveSettings() {
     }
     await saveMonth();
   }
-  state.habits = newHabits; await saveHabits(); render(); closeSettings();
+  state.habits = newHabits; await saveHabits(); render(); renderTodayHabits(); closeSettings();
 }
 
 document.getElementById('openSettings').addEventListener('click', openSettings);
@@ -167,6 +167,113 @@ modalBackdrop.addEventListener('click', e => { if (e.target === modalBackdrop) c
 
 document.getElementById('prevMonth').addEventListener('click', async () => { state.month--; if (state.month < 0) { state.month=11; state.year--; } await loadMonth(); render(); });
 document.getElementById('nextMonth').addEventListener('click', async () => { state.month++; if (state.month > 11) { state.month=0; state.year++; } await loadMonth(); render(); });
+
+document.getElementById('fabBtn').addEventListener('click', openSettings);
+
+// ── Today view ────────────────────────────────────────────────────────────────
+
+const HABIT_ICON_PRESETS = [
+  { bg: '#e8f0fe', emoji: '🎯' },
+  { bg: '#e0f7f4', emoji: '🌈' },
+  { bg: '#f3e8ff', emoji: '💪' },
+  { bg: '#e8f5e9', emoji: '🌿' },
+  { bg: '#fff3e0', emoji: '🔥' },
+  { bg: '#fce4ec', emoji: '❤️' },
+  { bg: '#e3f2fd', emoji: '💧' },
+  { bg: '#fffde7', emoji: '⭐' },
+  { bg: '#fbe9e7', emoji: '🏃' },
+  { bg: '#e8eaf6', emoji: '📚' },
+  { bg: '#e0f2f1', emoji: '🧘' },
+  { bg: '#f9fbe7', emoji: '☀️' },
+];
+
+function getHabitIcon(name, index) {
+  const n = (name || '').toLowerCase();
+  if (n.includes('exerc') || n.includes('sport') || n.includes('gym') || n.includes('muscl') || n.includes('fit')) return { bg: '#f3e8ff', emoji: '💪' };
+  if (n.includes('stretch') || n.includes('yoga') || n.includes('médit') || n.includes('meditat') || n.includes('respir')) return { bg: '#e0f2f1', emoji: '🧘' };
+  if (n.includes('calme') || n.includes('calm') || n.includes('zen') || n.includes('stress')) return { bg: '#e0f7f4', emoji: '🌈' };
+  if (n.includes('plaint') || n.includes('complain') || n.includes('moins se')) return { bg: '#e8f0fe', emoji: '🚫' };
+  if (n.includes('lire') || n.includes('read') || n.includes('livre') || n.includes('book')) return { bg: '#e8eaf6', emoji: '📚' };
+  if (n.includes('eau') || n.includes('water') || n.includes('hydrat')) return { bg: '#e3f2fd', emoji: '💧' };
+  if (n.includes('dorm') || n.includes('sleep') || n.includes('nuit') || n.includes('coucher')) return { bg: '#fce4ec', emoji: '😴' };
+  if (n.includes('march') || n.includes('walk') || n.includes('courir') || n.includes('run') || n.includes('jogg')) return { bg: '#fbe9e7', emoji: '🏃' };
+  if (n.includes('fruit') || n.includes('légume') || n.includes('manger') || n.includes('nutrit')) return { bg: '#e8f5e9', emoji: '🥗' };
+  return HABIT_ICON_PRESETS[index % HABIT_ICON_PRESETS.length];
+}
+
+function renderTodayHabits() {
+  const todayEl = document.getElementById('habitsListToday');
+  const countBadge = document.getElementById('habitsCountBadge');
+  if (!todayEl) return;
+
+  const now = new Date();
+  const todayDay = now.getDate();
+  const isCurrentMonth = now.getFullYear() === state.year && now.getMonth() === state.month;
+
+  const activeHabits = state.habits.map((name, i) => ({ name, i })).filter(h => h.name.trim());
+  if (countBadge) countBadge.textContent = activeHabits.length;
+
+  if (!activeHabits.length) {
+    todayEl.innerHTML = '<div style="text-align:center;padding:24px 0;color:#8e8e93;font-size:15px;">Aucune habitude.<br>Appuie sur + pour commencer.</div>';
+    return;
+  }
+
+  todayEl.innerHTML = activeHabits.map(({ name, i }) => {
+    const icon = getHabitIcon(name, i);
+    let status = "Aujourd'hui", statusClass = '';
+    if (isCurrentMonth && state.data[todayDay]) {
+      const val = state.data[todayDay][i];
+      if (val === 1) { status = '✓ Fait'; statusClass = 'done'; }
+      else if (val === 2) { status = '✗ Raté'; statusClass = 'fail'; }
+    }
+    return `<div class="habit-today-item" data-habit="${i}" data-day="${todayDay}">
+      <div class="habit-icon" style="background:${icon.bg}">${icon.emoji}</div>
+      <span class="habit-today-name">${escapeAttr(name)}</span>
+      <span class="habit-today-status ${statusClass}">${status}</span>
+    </div>`;
+  }).join('');
+
+  todayEl.querySelectorAll('.habit-today-item').forEach(el => {
+    el.addEventListener('click', () => {
+      if (!isCurrentMonth) return;
+      const day = parseInt(el.dataset.day, 10);
+      const habit = parseInt(el.dataset.habit, 10);
+      if (!state.data[day]) state.data[day] = {};
+      const cur = state.data[day][habit] || 0;
+      state.data[day][habit] = (cur + 1) % 3;
+      if (state.data[day][habit] === 0) delete state.data[day][habit];
+      if (Object.keys(state.data[day] || {}).length === 0) delete state.data[day];
+      saveMonth();
+      renderTodayHabits();
+    });
+  });
+}
+
+// ── Tab navigation ─────────────────────────────────────────────────────────────
+
+const PAGE_TITLES = { today: "Aujourd'hui", calendar: 'Calendrier', fruits: 'Fruits & Légumes', focus: 'Focus', more: 'Paramètres' };
+
+document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => btn.addEventListener('click', async () => {
+  const id = btn.dataset.tab;
+
+  if (id === 'more') { openSettings(); return; }
+  if (id === 'focus') return;
+
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('panel-' + id);
+  if (panel) panel.classList.add('active');
+
+  const pageTitleEl = document.getElementById('pageTitle');
+  if (pageTitleEl) pageTitleEl.textContent = PAGE_TITLES[id] || '';
+
+  if (id === 'fruits') { await loadFruits(); renderFruits(); }
+  else if (id === 'today') { renderTodayHabits(); }
+}));
+
+// ── Fruits ─────────────────────────────────────────────────────────────────────
 
 const FRUIT_GOAL = 30;
 const EMOJI_MAP = {
@@ -266,7 +373,7 @@ function renderFruits() {
   document.getElementById('veggiesCount').textContent=veggiesOnly;
   const pct=Math.min(100,(count/FRUIT_GOAL)*100);
   document.getElementById('progressFill').style.width=pct+'%';
-  document.getElementById('progressFill').style.background=count>=FRUIT_GOAL?'#5c8a4a':'#8ba673';
+  document.getElementById('progressFill').style.background=count>=FRUIT_GOAL?'#34c759':'#5856d6';
   const list=document.getElementById('fruitsList');
   if(!fruitState.items.length){list.innerHTML='<div class="fruits-empty">Aucun fruit ou légume cette semaine.<br>Commence par en ajouter un ci-dessus.</div>';return;}
   const fruitsArr=[],veggiesArr=[];
@@ -307,15 +414,11 @@ document.getElementById('nextWeek').addEventListener('click',async()=>{
   await loadFruits();renderFruits();
 });
 
-const habitsNav=document.getElementById('habitsNav'),headerTitle=document.getElementById('headerTitle');
-document.querySelectorAll('.tab').forEach(tab=>tab.addEventListener('click',async()=>{
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  tab.classList.add('active');
-  const id=tab.dataset.tab;
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('panel-'+id).classList.add('active');
-  if(id==='habits'){habitsNav.style.display='';headerTitle.textContent='Habit Tracker';}
-  else{habitsNav.style.display='none';headerTitle.textContent='Fruits & Légumes';await loadFruits();renderFruits();}
-}));
+// ── Init ───────────────────────────────────────────────────────────────────────
 
-(async function init(){await loadHabits();await loadMonth();render();})();
+(async function init() {
+  await loadHabits();
+  await loadMonth();
+  render();
+  renderTodayHabits();
+})();
