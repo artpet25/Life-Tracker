@@ -267,14 +267,18 @@ function renderWeekStrip() {
       const hasDone = sameMonth && Object.values(state.data[dayNum] || {}).some(v => v === 1);
       cls += hasDone ? ' done' : ' past';
     }
-    html += `<div class="week-day"><div class="week-day-label">${DAY_LABELS[i]}</div><div class="${cls}">${dayNum}</div></div>`;
+    const isDone = cls.includes('done');
+    const content = isDone ? '✓' : dayNum;
+    html += `<div class="week-day"><div class="week-day-label">${DAY_LABELS[i]}</div><div class="${cls}">${content}</div></div>`;
   }
   stripEl.innerHTML = html;
 
   if (widgetEl) {
     const streak = calcStreak();
-    const label = streak <= 1 ? 'jour de suite' : 'jours de suite';
-    widgetEl.innerHTML = `<div class="streak-flame">${streak > 0 ? '🔥' : '💧'}</div><div class="streak-info${streak === 0 ? ' streak-zero' : ''}"><div class="streak-count">${streak}</div><div class="streak-label">${streak === 0 ? 'Commence aujourd\'hui !' : label}</div></div>`;
+    const label = streak === 0 ? 'Commence !' : streak === 1 ? 'Jour de suite' : 'Jours de suite';
+    widgetEl.innerHTML = streak > 0
+      ? `<div class="streak-flame-wrap"><span class="streak-flame-bg">🔥</span><span class="streak-flame-count">${streak}</span></div><span class="streak-label">${label}</span>`
+      : `<div class="streak-flame-wrap"><span class="streak-flame-bg">🔥</span><span class="streak-flame-count" style="color:#c7c7cc">0</span></div><span class="streak-label streak-zero">${label}</span>`;
   }
 }
 
