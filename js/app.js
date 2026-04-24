@@ -13,7 +13,7 @@ window.storage = {
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('/service-worker.js')
+      .register('./service-worker.js')
       .then(() => console.log('[SW] Registered'))
       .catch(err => console.warn('[SW] Failed:', err));
   });

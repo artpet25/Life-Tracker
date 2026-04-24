@@ -1,11 +1,11 @@
-const CACHE = 'life-tracker-v4';
+const CACHE = 'life-tracker-v5';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/js/app.js',
-  '/js/main.js',
-  '/manifest.json',
-  '/icons/icon.svg',
+  './',
+  './index.html',
+  './js/app.js',
+  './js/main.js',
+  './manifest.json',
+  './icons/icon.svg',
 ];
 
 self.addEventListener('install', e => {
