@@ -241,9 +241,8 @@ function calcStreak() {
 }
 
 function renderWeekStrip() {
-  const stripEl = document.getElementById('weekStrip');
   const widgetEl = document.getElementById('streakWidget');
-  if (!stripEl) return;
+  if (!widgetEl) return;
 
   const today = new Date();
   const dow = today.getDay();
@@ -251,7 +250,7 @@ function renderWeekStrip() {
   monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
   const DAY_LABELS = ['L','M','M','J','V','S','D'];
 
-  let html = '';
+  let daysHtml = '';
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
@@ -259,7 +258,7 @@ function renderWeekStrip() {
     const sameMonth = d.getFullYear() === state.year && d.getMonth() === state.month;
     const isToday = d.toDateString() === today.toDateString();
     const isFuture = d > today;
-    let cls = 'week-day-num';
+    let cls = 's-circle';
     if (isToday) {
       const hasDone = sameMonth && Object.values(state.data[dayNum] || {}).some(v => v === 1);
       cls += hasDone ? ' done' : ' today';
@@ -268,18 +267,21 @@ function renderWeekStrip() {
       cls += hasDone ? ' done' : ' past';
     }
     const isDone = cls.includes('done');
-    const content = isDone ? '✓' : dayNum;
-    html += `<div class="week-day"><div class="week-day-label">${DAY_LABELS[i]}</div><div class="${cls}">${content}</div></div>`;
+    daysHtml += `<div class="s-day"><span class="s-day-label">${DAY_LABELS[i]}</span><div class="${cls}">${isDone ? '✓' : dayNum}</div></div>`;
   }
-  stripEl.innerHTML = html;
 
-  if (widgetEl) {
-    const streak = calcStreak();
-    const label = streak === 0 ? 'Commence !' : streak === 1 ? 'Jour de suite' : 'Jours de suite';
-    widgetEl.innerHTML = streak > 0
-      ? `<div class="streak-flame-wrap"><span class="streak-flame-bg">🔥</span><span class="streak-flame-count">${streak}</span></div><span class="streak-label">${label}</span>`
-      : `<div class="streak-flame-wrap"><span class="streak-flame-bg">🔥</span><span class="streak-flame-count" style="color:#c7c7cc">0</span></div><span class="streak-label streak-zero">${label}</span>`;
-  }
+  const streak = calcStreak();
+  const label = streak === 1 ? 'Jour' : 'Jours';
+  const flameColor = streak > 0 ? 'white' : '#c7c7cc';
+  const labelColor = streak > 0 ? '#ff6b35' : '#c7c7cc';
+  widgetEl.innerHTML = `<div class="streak-card">
+    <div class="streak-left">
+      <div class="s-flame-wrap"><span class="s-flame-bg">🔥</span><span class="s-flame-count" style="color:${flameColor}">${streak || 0}</span></div>
+      <span class="s-streak-label" style="color:${labelColor}">${label}</span>
+    </div>
+    <div class="streak-sep"></div>
+    <div class="streak-week">${daysHtml}</div>
+  </div>`;
 }
 
 // ── Today view ────────────────────────────────────────────────────────────────
@@ -326,19 +328,6 @@ function getHabitVisual(name, index) {
   return defaults[index % defaults.length];
 }
 
-function habitItemHTML(h, todayDay, isDone) {
-  const v = getHabitVisual(h.name, h.i);
-  const c = PILLAR_COLORS[v.pillar];
-  const pillLabel = v.pillar === 'body' ? 'Body' : v.pillar === 'mind' ? 'Mind' : 'Spirit';
-  return `<div class="habit-today-item" data-habit="${h.i}" data-day="${todayDay}">
-    <button class="habit-icon-btn${isDone ? ' done-icon' : ''}" data-habit="${h.i}" style="background:${isDone ? '#e8f5e9' : c.bg}">${isDone ? '✓' : v.emoji}</button>
-    <span class="habit-today-name${isDone ? ' done-name' : ''}">${escapeAttr(h.name)}</span>
-    <span class="pillar-tag pillar-${v.pillar}">${pillLabel}</span>
-  </div>`;
-}
-
-let doneSectionOpen = false;
-
 function renderTodayHabits() {
   const pendingSection = document.getElementById('pendingSection');
   const doneSection = document.getElementById('doneSection');
@@ -351,53 +340,36 @@ function renderTodayHabits() {
   const activeHabits = state.habits.map((name, i) => ({ name, i })).filter(h => h.name.trim());
 
   if (!activeHabits.length) {
-    pendingSection.innerHTML = '<div class="card"><div style="text-align:center;padding:24px 0;color:#8e8e93;font-size:15px;">Aucune habitude.<br>Appuie sur + pour commencer.</div></div>';
+    pendingSection.innerHTML = '<div class="habit-card" style="justify-content:center;color:#8e8e93;font-size:15px;text-align:center;">Aucune habitude.<br>Appuie sur + pour commencer.</div>';
     if (doneSection) doneSection.innerHTML = '';
     return;
   }
 
-  const pending = [], done = [];
+  let pendingHtml = '';
+  let doneHtml = '';
+
   activeHabits.forEach(h => {
     const val = isCurrentMonth && state.data[todayDay] ? (state.data[todayDay][h.i] || 0) : 0;
-    (val === 1 ? done : pending).push(h);
+    const isDone = val === 1;
+    const v = getHabitVisual(h.name, h.i);
+    const c = PILLAR_COLORS[v.pillar];
+    const pillLabel = v.pillar === 'body' ? 'Body' : v.pillar === 'mind' ? 'Mind' : 'Spirit';
+    const card = `<div class="habit-card${isDone ? ' done-card' : ''}" data-habit="${h.i}" data-day="${todayDay}">
+      <div class="habit-card-icon" style="background:${isDone ? '#e8f5e9' : c.bg}">${isDone ? '✓' : v.emoji}</div>
+      <div class="habit-card-body">
+        <div class="habit-card-name${isDone ? ' done-name' : ''}">${escapeAttr(h.name)}</div>
+        <div class="habit-card-meta"><span class="pillar-tag pillar-${v.pillar}">${pillLabel}</span></div>
+      </div>
+      <button class="habit-card-btn${isDone ? ' done-btn' : ''}" data-habit="${h.i}">${isDone ? '✓' : ''}</button>
+    </div>`;
+    if (isDone) doneHtml += card;
+    else pendingHtml += card;
   });
 
-  pendingSection.innerHTML = `<div class="card">
-    <div class="card-header">
-      <span class="card-title">Habitudes</span>
-      <span class="section-badge badge-pending">${pending.length}</span>
-    </div>
-    ${pending.length === 0
-      ? '<div class="all-done-msg">🎉 Tout fait !</div>'
-      : pending.map(h => habitItemHTML(h, todayDay, false)).join('')}
-  </div>`;
+  pendingSection.innerHTML = pendingHtml;
+  if (doneSection) doneSection.innerHTML = doneHtml;
 
-  if (doneSection) {
-    doneSection.innerHTML = done.length === 0 ? '' : `<div class="card">
-      <div class="card-header done-section-header" id="doneSectionHeader">
-        <span class="card-title">Done</span>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span class="section-badge badge-done">${done.length}</span>
-          <span class="collapse-arrow${doneSectionOpen ? ' open' : ''}" id="collapseArrow">›</span>
-        </div>
-      </div>
-      <div class="collapsible-body${doneSectionOpen ? ' open' : ''}" id="doneList">
-        ${done.map(h => habitItemHTML(h, todayDay, true)).join('')}
-      </div>
-    </div>`;
-
-    const hdr = document.getElementById('doneSectionHeader');
-    if (hdr) hdr.addEventListener('pointerdown', e => {
-      e.preventDefault();
-      doneSectionOpen = !doneSectionOpen;
-      const arrow = document.getElementById('collapseArrow');
-      const body = document.getElementById('doneList');
-      if (arrow) arrow.classList.toggle('open', doneSectionOpen);
-      if (body) body.classList.toggle('open', doneSectionOpen);
-    });
-  }
-
-  document.querySelectorAll('.habit-icon-btn').forEach(btn => {
+  document.querySelectorAll('.habit-card-btn').forEach(btn => {
     btn.addEventListener('pointerdown', e => {
       if (!isCurrentMonth) return;
       e.preventDefault();
