@@ -201,6 +201,12 @@ function getHabitIcon(name, index) {
   return HABIT_ICON_PRESETS[index % HABIT_ICON_PRESETS.length];
 }
 
+function habitStatus(val) {
+  if (val === 1) return { text: '✓ Fait', cls: 'done' };
+  if (val === 2) return { text: '✗ Raté', cls: 'fail' };
+  return { text: "Aujourd'hui", cls: '' };
+}
+
 function renderTodayHabits() {
   const todayEl = document.getElementById('habitsListToday');
   const countBadge = document.getElementById('habitsCountBadge');
@@ -220,31 +226,32 @@ function renderTodayHabits() {
 
   todayEl.innerHTML = activeHabits.map(({ name, i }) => {
     const icon = getHabitIcon(name, i);
-    let status = "Aujourd'hui", statusClass = '';
-    if (isCurrentMonth && state.data[todayDay]) {
-      const val = state.data[todayDay][i];
-      if (val === 1) { status = '✓ Fait'; statusClass = 'done'; }
-      else if (val === 2) { status = '✗ Raté'; statusClass = 'fail'; }
-    }
+    const val = isCurrentMonth && state.data[todayDay] ? (state.data[todayDay][i] || 0) : 0;
+    const { text, cls } = habitStatus(val);
     return `<div class="habit-today-item" data-habit="${i}" data-day="${todayDay}">
       <div class="habit-icon" style="background:${icon.bg}">${icon.emoji}</div>
       <span class="habit-today-name">${escapeAttr(name)}</span>
-      <span class="habit-today-status ${statusClass}">${status}</span>
+      <span class="habit-today-status ${cls}">${text}</span>
     </div>`;
   }).join('');
 
   todayEl.querySelectorAll('.habit-today-item').forEach(el => {
-    el.addEventListener('click', () => {
+    el.addEventListener('pointerdown', e => {
       if (!isCurrentMonth) return;
+      e.preventDefault();
       const day = parseInt(el.dataset.day, 10);
       const habit = parseInt(el.dataset.habit, 10);
       if (!state.data[day]) state.data[day] = {};
       const cur = state.data[day][habit] || 0;
-      state.data[day][habit] = (cur + 1) % 3;
-      if (state.data[day][habit] === 0) delete state.data[day][habit];
+      const next = (cur + 1) % 3;
+      if (next === 0) delete state.data[day][habit]; else state.data[day][habit] = next;
       if (Object.keys(state.data[day] || {}).length === 0) delete state.data[day];
+      // Update DOM immediately for instant feedback
+      const statusEl = el.querySelector('.habit-today-status');
+      const { text, cls } = habitStatus(next);
+      statusEl.textContent = text;
+      statusEl.className = 'habit-today-status ' + cls;
       saveMonth();
-      renderTodayHabits();
     });
   });
 }
