@@ -4,166 +4,236 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Life Tracker">
-<meta name="theme-color" content="#1a1f1a">
+<meta name="theme-color" content="#f2f2f7">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
 <link rel="manifest" href="manifest.json">
 <title>Life Tracker</title>
-<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="js/app.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body { background: #f4f1ea; color: #1a1f1a; font-family: 'JetBrains Mono', monospace; min-height: 100vh; overflow-x: hidden; }
-  .grain { position: fixed; inset: 0; pointer-events: none; opacity: 0.35; z-index: 1; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.2'/%3E%3C/svg%3E"); }
-  .wrap { position: relative; z-index: 2; max-width: 720px; margin: 0 auto; padding: 18px 12px 90px; }
-  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 0 6px; gap: 8px; }
-  header h1 { font-family: 'Caveat', cursive; font-weight: 700; font-size: 30px; letter-spacing: 0.02em; }
-  .month-nav { display: flex; align-items: center; gap: 6px; font-size: 12px; }
-  .month-nav button, .settings-btn { background: none; border: 1px solid #1a1f1a; color: #1a1f1a; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; font-family: inherit; }
-  .month-nav button:active, .settings-btn:active { background: #1a1f1a; color: #f4f1ea; }
-  .month-label { min-width: 90px; text-align: center; text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; font-weight: 600; }
-  .sheet { background: #fafaf3; border: 1px solid rgba(26,31,26,0.15); padding: 14px 6px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); position: relative; }
-  .habits-title { font-family: 'Caveat', cursive; font-weight: 700; font-size: 22px; letter-spacing: 0.05em; text-decoration: underline; text-underline-offset: 3px; padding: 0 4px 10px 8px; }
-  .ring-container { position: relative; width: 100%; aspect-ratio: 1; margin: 0 auto; }
+  html, body { background: #f2f2f7; color: #1c1c1e; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif; min-height: 100vh; overflow-x: hidden; }
+
+  .wrap { max-width: 480px; margin: 0 auto; padding-bottom: 160px; }
+
+  /* Top bar */
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 0; }
+  .topbar-menu { background: white; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 12px rgba(0,0,0,0.09); border: none; cursor: pointer; font-size: 18px; color: #1c1c1e; line-height: 1; }
+  .topbar-actions { display: flex; align-items: center; gap: 12px; background: white; border-radius: 24px; padding: 10px 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.09); }
+  .topbar-action-btn { background: none; border: none; cursor: pointer; font-size: 18px; line-height: 1; display: flex; align-items: center; }
+  .topbar-dots { font-size: 22px; color: #8e8e93; letter-spacing: 2px; line-height: 1; cursor: pointer; }
+
+  /* Page title */
+  .page-title { font-size: 36px; font-weight: 800; padding: 14px 20px 18px; color: #1c1c1e; letter-spacing: -0.5px; }
+
+  /* Card */
+  .section { margin: 0 16px 14px; }
+  .card { background: white; border-radius: 20px; padding: 18px 16px; box-shadow: 0 2px 16px rgba(0,0,0,0.05); }
+  .card-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid #f2f2f7; margin-bottom: 2px; }
+  .card-title { font-size: 17px; font-weight: 600; color: #1c1c1e; }
+  .card-count { display: flex; align-items: center; gap: 5px; color: #8e8e93; font-size: 16px; }
+
+  /* Today habit items */
+  .habit-today-item { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid #f2f2f7; cursor: pointer; user-select: none; -webkit-user-select: none; }
+  .habit-today-item:last-child { border-bottom: none; }
+  .habit-today-item:active { opacity: 0.7; }
+  .habit-icon { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .habit-today-name { flex: 1; font-size: 16px; font-weight: 500; color: #1c1c1e; }
+  .habit-today-status { font-size: 14px; font-weight: 500; color: #5856d6; white-space: nowrap; }
+  .habit-today-status.done { color: #34c759; }
+  .habit-today-status.fail { color: #ff3b30; }
+
+  /* FAB */
+  .fab { position: fixed; bottom: 96px; right: 20px; width: 58px; height: 58px; background: #5856d6; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; line-height: 1; box-shadow: 0 4px 20px rgba(88,86,214,0.45); border: none; cursor: pointer; z-index: 40; }
+  .fab:active { opacity: 0.85; transform: scale(0.95); }
+
+  /* Bottom nav */
+  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-radius: 28px 28px 0 0; padding: 8px 10px; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); display: flex; justify-content: space-around; align-items: center; box-shadow: 0 -4px 24px rgba(0,0,0,0.08); z-index: 50; }
+  .nav-btn { display: flex; align-items: center; justify-content: center; width: 52px; height: 52px; border: none; background: none; cursor: pointer; border-radius: 16px; transition: background 0.2s; }
+  .nav-btn.active { background: #5856d6; }
+  .nav-btn svg { width: 24px; height: 24px; fill: none; stroke: #8e8e93; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .nav-btn.active svg { stroke: white; }
+
+  /* Tab panels */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Calendar panel */
+  .calendar-header { display: flex; align-items: center; justify-content: space-between; padding: 0 20px 14px; }
+  .calendar-month-nav { display: flex; align-items: center; gap: 8px; }
+  .calendar-nav-btn { background: white; border: none; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); color: #1c1c1e; }
+  .calendar-month-label { font-size: 16px; font-weight: 600; color: #1c1c1e; min-width: 150px; text-align: center; }
+  .settings-btn { background: white; border: none; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); color: #1c1c1e; }
+  .sheet { background: white; border-radius: 20px; margin: 0 16px; padding: 16px; box-shadow: 0 2px 16px rgba(0,0,0,0.05); }
+  .ring-container { position: relative; width: 100%; aspect-ratio: 1; }
   svg { width: 100%; height: 100%; display: block; }
   .habits-list { position: absolute; left: 0; top: 0; width: 42%; height: 100%; pointer-events: none; z-index: 3; }
   .habit-line { position: absolute; left: 0; width: 100%; height: 0; pointer-events: auto; }
-  .habit-line-inner { display: grid; grid-template-columns: 18px 1fr; align-items: end; gap: 3px; width: 100%; font-family: 'Caveat', cursive; font-size: clamp(11px, 2.6vw, 15px); line-height: 1; transform: translateY(-100%); padding-bottom: 2px; padding-left: 4px; }
-  .habit-num { font-weight: 700; text-align: right; padding-right: 2px; }
-  .habit-name { width: 100%; min-width: 0; font-family: 'Caveat', cursive; font-size: inherit; background: transparent; border: none; color: inherit; font-weight: 500; padding: 0 2px 1px; }
-  .habit-name:focus { outline: none; background: rgba(255,220,100,0.3); }
-  .habit-name::placeholder { color: rgba(26,31,26,0.3); font-style: italic; }
-  .center-month-label { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; font-family: 'Caveat', cursive; pointer-events: none; z-index: 2; }
-  .center-month-label .lbl { font-size: 10px; letter-spacing: 0.1em; color: #666; font-family: 'JetBrains Mono', monospace; }
-  .center-month-label .mo { font-size: clamp(16px, 4vw, 24px); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; margin-top: 2px; }
-  .center-month-label .yr { font-size: clamp(14px, 3.5vw, 20px); font-weight: 500; margin-top: 2px; }
-  .center-month-label .pct { font-size: 11px; color: #8b7355; margin-top: 4px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em; }
-  .day-num { font-family: 'JetBrains Mono', monospace; font-size: 10px; fill: #1a1f1a; font-weight: 600; }
-  .day-num-weekend { fill: #c44545; font-weight: 700; }
-  .cell { cursor: pointer; transition: fill 0.12s ease; stroke: #1a1f1a; stroke-width: 0.7; }
-  .cell-empty { fill: #fafaf3; } .cell-empty-weekend { fill: #f0e9d8; } .cell-done { fill: #5c8a4a; } .cell-fail { fill: #c44545; }
-  .cell-future { fill: #ebe5d8; cursor: not-allowed; opacity: 0.6; } .cell-future-weekend { fill: #e0d8c4; cursor: not-allowed; opacity: 0.6; }
-  .legend { display: flex; gap: 16px; justify-content: center; margin-top: 14px; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: #8b7355; }
+  .habit-line-inner { display: grid; grid-template-columns: 18px 1fr; align-items: end; gap: 3px; width: 100%; font-size: clamp(11px, 2.6vw, 15px); line-height: 1; transform: translateY(-100%); padding-bottom: 2px; padding-left: 4px; }
+  .habit-num { font-weight: 700; text-align: right; padding-right: 2px; font-size: 11px; color: #8e8e93; }
+  .habit-name { width: 100%; min-width: 0; font-size: inherit; background: transparent; border: none; color: #1c1c1e; font-weight: 500; padding: 0 2px 1px; }
+  .habit-name:focus { outline: none; background: rgba(88,86,214,0.1); border-radius: 4px; }
+  .habit-name::placeholder { color: #c7c7cc; }
+  .center-month-label { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); text-align: center; pointer-events: none; z-index: 2; }
+  .center-month-label .lbl { font-size: 10px; letter-spacing: 0.1em; color: #8e8e93; }
+  .center-month-label .mo { font-size: clamp(14px,3.5vw,22px); font-weight: 700; color: #1c1c1e; margin-top: 2px; }
+  .center-month-label .yr { font-size: clamp(12px,3vw,18px); font-weight: 500; color: #1c1c1e; margin-top: 2px; }
+  .center-month-label .pct { font-size: 11px; color: #8e8e93; margin-top: 4px; }
+  .day-num { font-size: 10px; fill: #1c1c1e; font-weight: 600; font-family: -apple-system, sans-serif; }
+  .day-num-weekend { fill: #ff3b30; font-weight: 700; }
+  .cell { cursor: pointer; transition: fill 0.12s ease; stroke: #e5e5ea; stroke-width: 0.7; }
+  .cell-empty { fill: #f9f9f9; } .cell-empty-weekend { fill: #fff5f5; } .cell-done { fill: #34c759; } .cell-fail { fill: #ff3b30; }
+  .cell-future { fill: #f2f2f7; cursor: not-allowed; opacity: 0.5; } .cell-future-weekend { fill: #f2f2f7; cursor: not-allowed; opacity: 0.5; }
+  .legend { display: flex; gap: 16px; justify-content: center; margin-top: 14px; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: #8e8e93; }
   .legend-item { display: flex; align-items: center; gap: 5px; }
-  .legend-swatch { width: 10px; height: 10px; border: 1px solid #1a1f1a; }
-  .hint { text-align: center; font-family: 'Caveat', cursive; font-size: 16px; color: #666; margin-top: 16px; line-height: 1.3; }
+  .legend-swatch { width: 10px; height: 10px; border-radius: 2px; }
   @keyframes pop { 0%{transform:scale(1)} 50%{transform:scale(1.12)} 100%{transform:scale(1)} }
   .cell.popping { animation: pop 0.22s ease; transform-origin: center; transform-box: fill-box; }
-  .modal-backdrop { position: fixed; inset: 0; background: rgba(26,31,26,0.5); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
-  .modal-backdrop.open { display: flex; }
-  .modal { background: #fafaf3; border: 1px solid #1a1f1a; width: 100%; max-width: 420px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-  .modal-header { padding: 14px 18px; border-bottom: 1px solid rgba(26,31,26,0.15); display: flex; align-items: center; justify-content: space-between; }
-  .modal-header h2 { font-family: 'Caveat', cursive; font-size: 24px; font-weight: 700; }
-  .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: #1a1f1a; padding: 4px 8px; }
-  .modal-body { padding: 14px 18px; overflow-y: auto; flex: 1; }
-  .modal-body .info { font-family: 'Caveat', cursive; font-size: 15px; color: #666; margin-bottom: 10px; line-height: 1.3; }
-  .edit-row { display: grid; grid-template-columns: 22px 1fr 28px; align-items: center; gap: 8px; padding: 4px 0; }
-  .edit-row .n { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8b7355; text-align: right; }
-  .edit-row input { width: 100%; font-family: 'Caveat', cursive; font-size: 17px; background: #f4f1ea; border: 1px solid rgba(26,31,26,0.2); padding: 6px 8px; color: #1a1f1a; }
-  .edit-row input:focus { outline: none; border-color: #1a1f1a; }
-  .edit-row .del { background: none; border: 1px solid rgba(26,31,26,0.3); width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 14px; color: #c44545; display: flex; align-items: center; justify-content: center; }
-  .edit-row .del:active { background: #c44545; color: white; } .edit-row .del:disabled { opacity: 0.3; cursor: not-allowed; }
-  .modal-footer { padding: 12px 18px; border-top: 1px solid rgba(26,31,26,0.15); display: flex; gap: 8px; }
-  .btn { flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; padding: 10px 12px; cursor: pointer; border: 1px solid #1a1f1a; background: #fafaf3; color: #1a1f1a; }
-  .btn-primary { background: #1a1f1a; color: #fafaf3; } .btn:active { opacity: 0.8; }
-  .loading { text-align: center; padding: 40px 20px; font-family: 'Caveat', cursive; font-size: 18px; color: #8b7355; }
-  .tabs { position: fixed; bottom: 0; left: 0; right: 0; display: flex; background: #fafaf3; border-top: 1px solid rgba(26,31,26,0.2); z-index: 50; padding-bottom: env(safe-area-inset-bottom, 0); box-shadow: 0 -2px 8px rgba(0,0,0,0.04); }
-  .tab { flex: 1; background: none; border: none; padding: 12px 8px 14px; cursor: pointer; font-family: 'Caveat', cursive; font-size: 18px; font-weight: 600; color: #8b7355; border-top: 3px solid transparent; transition: all 0.2s; }
-  .tab.active { color: #1a1f1a; border-top-color: #1a1f1a; }
-  .tab-panel { display: none; } .tab-panel.active { display: block; }
-  .fruits-header { display: flex; align-items: center; justify-content: space-between; padding: 0 6px 12px; }
-  .fruits-week-nav { display: flex; align-items: center; gap: 6px; }
-  .fruits-week-nav button { background: none; border: 1px solid #1a1f1a; color: #1a1f1a; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; font-family: inherit; }
-  .fruits-week-nav button:active { background: #1a1f1a; color: #f4f1ea; }
-  .week-label { font-family: 'Caveat', cursive; font-size: 22px; font-weight: 700; min-width: 80px; text-align: center; }
-  .week-dates { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #8b7355; letter-spacing: 0.05em; }
-  .counter-big { text-align: center; padding: 14px 12px; background: #fafaf3; border: 1px solid rgba(26,31,26,0.15); margin-bottom: 14px; }
+  .hint { text-align: center; font-size: 13px; color: #8e8e93; margin-top: 14px; line-height: 1.5; padding: 0 20px; }
+  .loading { text-align: center; padding: 40px 20px; font-size: 16px; color: #8e8e93; }
+
+  /* Fruits panel */
+  .fruits-header-wrap { padding: 0 20px 16px; }
+  .week-nav-row { display: flex; align-items: center; justify-content: space-between; }
+  .week-label-big { font-size: 22px; font-weight: 700; color: #1c1c1e; }
+  .week-dates-small { font-size: 12px; color: #8e8e93; margin-top: 2px; }
+  .week-nav-btns { display: flex; gap: 8px; }
+  .week-nav-btn { background: white; border: none; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.08); color: #1c1c1e; }
+  .counter-big { background: white; border-radius: 20px; padding: 16px; margin: 0 16px 14px; box-shadow: 0 2px 16px rgba(0,0,0,0.05); }
   .counter-triple { display: grid; grid-template-columns: 1fr 1px 1fr 1px 1fr; gap: 10px; align-items: center; }
-  .counter-triple .divider { background: rgba(26,31,26,0.15); height: 40px; width: 1px; justify-self: center; }
-  .counter-big .num { font-family: 'Caveat', cursive; font-size: 38px; font-weight: 700; color: #1a1f1a; line-height: 1; }
-  .counter-big .num .goal { color: #8b7355; font-size: 26px; }
-  .counter-big .label { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.15em; color: #8b7355; text-transform: uppercase; margin-top: 4px; }
-  .progress-bar { margin-top: 12px; height: 4px; background: rgba(26,31,26,0.1); position: relative; overflow: hidden; }
-  .progress-bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: #5c8a4a; transition: width 0.3s ease; }
-  .add-form-wrap { position: relative; margin-bottom: 10px; }
-  .suggestions { position: absolute; top: 100%; left: 0; right: 0; background: #fafaf3; border: 1px solid rgba(26,31,26,0.2); border-top: none; max-height: 220px; overflow-y: auto; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  .counter-triple .divider { background: #f2f2f7; height: 40px; width: 1px; justify-self: center; }
+  .counter-big .num { font-size: 34px; font-weight: 700; color: #1c1c1e; line-height: 1; text-align: center; }
+  .counter-big .num .goal { color: #8e8e93; font-size: 22px; }
+  .counter-big .label { font-size: 11px; letter-spacing: 0.05em; color: #8e8e93; text-transform: uppercase; margin-top: 4px; text-align: center; }
+  .progress-bar { margin-top: 14px; height: 6px; background: #f2f2f7; border-radius: 3px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: #34c759; border-radius: 3px; transition: width 0.3s ease; }
+  .add-form-wrap { position: relative; margin: 0 16px 10px; }
+  .suggestions { position: absolute; top: 100%; left: 0; right: 0; background: white; border-radius: 0 0 16px 16px; max-height: 220px; overflow-y: auto; z-index: 10; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
   .suggestions.hidden { display: none; }
-  .suggestion { display: flex; align-items: center; gap: 10px; padding: 8px 12px; cursor: pointer; font-family: 'Caveat', cursive; font-size: 17px; border-bottom: 1px dashed rgba(26,31,26,0.1); }
+  .suggestion { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; font-size: 16px; border-bottom: 1px solid #f2f2f7; }
   .suggestion:last-child { border-bottom: none; }
-  .suggestion:hover, .suggestion.highlighted { background: rgba(92,138,74,0.08); }
-  .suggestion .emoji { font-size: 19px; flex-shrink: 0; } .suggestion .match { font-weight: 700; } .suggestion .sugg-name { flex: 1; min-width: 0; }
-  .fruit-item .qty-badge { display: inline-block; background: #1a1f1a; color: #fafaf3; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 10px; margin-left: 4px; letter-spacing: 0.05em; }
-  .add-form { display: flex; gap: 6px; padding: 10px 6px; border: 1px solid rgba(26,31,26,0.15); background: #fafaf3; margin-bottom: 10px; }
-  .add-form input { flex: 1; font-family: 'Caveat', cursive; font-size: 18px; background: transparent; border: none; border-bottom: 1px solid rgba(26,31,26,0.3); padding: 4px 6px; color: #1a1f1a; min-width: 0; }
-  .add-form input:focus { outline: none; border-bottom-color: #1a1f1a; }
-  .add-form button { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; padding: 6px 14px; cursor: pointer; border: 1px solid #1a1f1a; background: #1a1f1a; color: #fafaf3; flex-shrink: 0; }
+  .suggestion:hover, .suggestion.highlighted { background: rgba(88,86,214,0.06); }
+  .suggestion .emoji { font-size: 20px; flex-shrink: 0; }
+  .suggestion .match { font-weight: 700; }
+  .sugg-name { flex: 1; }
+  .fruit-item .qty-badge { display: inline-block; background: #1c1c1e; color: white; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 10px; margin-left: 4px; }
+  .add-form { display: flex; gap: 8px; padding: 12px 14px; background: white; border-radius: 16px; margin-bottom: 10px; box-shadow: 0 2px 16px rgba(0,0,0,0.05); }
+  .add-form input { flex: 1; font-size: 16px; background: transparent; border: none; color: #1c1c1e; min-width: 0; }
+  .add-form input:focus { outline: none; }
+  .add-form input::placeholder { color: #c7c7cc; }
+  .add-form button { font-size: 14px; font-weight: 600; padding: 8px 16px; cursor: pointer; border: none; background: #5856d6; color: white; border-radius: 10px; flex-shrink: 0; }
   .add-form button:active { opacity: 0.8; }
-  .fruits-list { padding: 4px 0 0; }
-  .section-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 6px 6px; margin-top: 8px; border-bottom: 2px solid #1a1f1a; }
+  .fruits-list { padding: 0 16px; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 0 8px; border-bottom: 2px solid #f2f2f7; }
   .section-header:first-child { margin-top: 0; }
-  .section-title { font-family: 'Caveat', cursive; font-size: 22px; font-weight: 700; letter-spacing: 0.02em; }
-  .section-count { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; color: #8b7355; background: #fafaf3; padding: 3px 9px; border-radius: 10px; border: 1px solid rgba(26,31,26,0.2); }
-  .fruit-item { display: grid; grid-template-columns: 22px 1fr auto 26px 24px; align-items: center; gap: 6px; padding: 8px 4px; border-bottom: 1px dashed rgba(26,31,26,0.15); font-family: 'Caveat', cursive; font-size: 18px; }
+  .section-title { font-size: 18px; font-weight: 700; color: #1c1c1e; }
+  .section-count { font-size: 13px; font-weight: 600; color: #8e8e93; background: #f2f2f7; padding: 3px 10px; border-radius: 10px; }
+  .fruit-item { display: grid; grid-template-columns: 24px 1fr auto 60px 32px; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid #f2f2f7; font-size: 16px; }
   .fruit-item:last-child { border-bottom: none; }
-  .fruit-item .type-toggle { background: none; border: 1px dashed rgba(26,31,26,0.25); width: 26px; height: 26px; cursor: pointer; font-size: 13px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0; opacity: 0.55; transition: opacity 0.15s; }
-  .fruit-item .type-toggle:active { opacity: 1; background: rgba(26,31,26,0.08); }
-  .fruit-item .idx { font-weight: 700; color: #8b7355; font-size: 16px; text-align: right; }
+  .fruit-item .type-toggle { background: none; border: 1px solid #e5e5ea; width: 28px; height: 28px; cursor: pointer; font-size: 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; opacity: 0.6; transition: opacity 0.15s; }
+  .fruit-item .type-toggle:active { opacity: 1; }
+  .fruit-item .idx { font-weight: 700; color: #8e8e93; font-size: 14px; text-align: right; }
   .fruit-item .name-wrap { display: flex; align-items: center; gap: 6px; min-width: 0; }
   .fruit-item .emoji { font-size: 20px; flex-shrink: 0; }
   .fruit-item .name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .fruit-item .qty-controls { display: flex; align-items: center; gap: 4px; }
-  .fruit-item .qty-btn { background: #fafaf3; border: 1px solid rgba(26,31,26,0.3); width: 24px; height: 24px; cursor: pointer; font-family: inherit; font-size: 14px; color: #1a1f1a; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
-  .fruit-item .qty-btn:active { background: #1a1f1a; color: #fafaf3; }
-  .fruit-item .qty-num { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; min-width: 22px; text-align: center; }
-  .fruit-item .del { background: none; border: 1px solid rgba(26,31,26,0.2); width: 24px; height: 24px; cursor: pointer; font-size: 12px; color: #c44545; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-  .fruit-item .del:active { background: #c44545; color: white; }
-  .fruits-empty { text-align: center; padding: 30px 20px; font-family: 'Caveat', cursive; font-size: 18px; color: #8b7355; font-style: italic; }
-  .season-block { margin-bottom: 14px; padding: 10px 10px 12px; background: linear-gradient(135deg,#e8ecdb 0%,#dce5c8 100%); border: 1px solid rgba(92,138,74,0.3); position: relative; }
-  .season-block-header { position: relative; margin-bottom: 8px; }
-  .season-block-title { font-family: 'Caveat', cursive; font-size: 18px; font-weight: 700; color: #3d5a2a; text-transform: capitalize; }
-  .season-strip { position: relative; display: flex; flex-wrap: wrap; gap: 6px; }
-  .season-chip { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; background: rgba(255,255,255,0.7); border: 1px solid rgba(92,138,74,0.4); border-radius: 16px; cursor: pointer; font-family: 'Caveat', cursive; font-size: 15px; color: #1a1f1a; transition: all 0.15s; }
-  .season-chip:active { background: #5c8a4a; color: white; transform: scale(0.96); }
+  .fruit-item .qty-btn { background: #f2f2f7; border: none; width: 26px; height: 26px; cursor: pointer; font-size: 15px; color: #1c1c1e; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+  .fruit-item .qty-btn:active { background: #5856d6; color: white; }
+  .fruit-item .qty-num { font-size: 14px; font-weight: 600; min-width: 20px; text-align: center; color: #1c1c1e; }
+  .fruit-item .del { background: none; border: 1px solid #ffe0e0; width: 26px; height: 26px; cursor: pointer; font-size: 14px; color: #ff3b30; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .fruit-item .del:active { background: #ff3b30; color: white; }
+  .fruits-empty { text-align: center; padding: 30px 20px; font-size: 16px; color: #8e8e93; }
+  .season-block { margin: 0 16px 14px; padding: 14px 14px 16px; background: linear-gradient(135deg,#e8f5e9 0%,#dcedc8 100%); border-radius: 16px; }
+  .season-block-title { font-size: 16px; font-weight: 600; color: #2e7d32; margin-bottom: 10px; }
+  .season-strip { display: flex; flex-wrap: wrap; gap: 6px; }
+  .season-chip { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; background: rgba(255,255,255,0.85); border: none; border-radius: 20px; cursor: pointer; font-size: 14px; color: #1c1c1e; transition: all 0.15s; }
+  .season-chip:active { background: #43a047; color: white; transform: scale(0.96); }
   .season-chip .emoji { font-size: 15px; }
-  .season-empty { font-family: 'Caveat', cursive; font-size: 15px; color: #5c8a4a; font-style: italic; padding: 4px 0; }
-  .season-badge { display: inline-block; font-size: 13px; margin-left: 2px; filter: saturate(1.3); }
-  .fruit-item.in-season { background: linear-gradient(to right,rgba(92,138,74,0.05),transparent 60%); }
-  .fruit-item.in-season .name { color: #3d5a2a; }
-  .sugg-name { flex: 1; }
+  .season-empty { font-size: 14px; color: #43a047; font-style: italic; }
+  .season-badge { font-size: 13px; margin-left: 2px; }
+  .fruit-item.in-season { background: linear-gradient(to right,rgba(67,160,71,0.05),transparent 60%); }
+  .fruit-item.in-season .name { color: #2e7d32; }
+
+  /* Modal - slides up from bottom */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; display: none; align-items: flex-end; justify-content: center; }
+  .modal-backdrop.open { display: flex; }
+  .modal { background: white; border-radius: 24px 24px 0 0; width: 100%; max-width: 480px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 -4px 30px rgba(0,0,0,0.15); padding-bottom: env(safe-area-inset-bottom, 0); }
+  .modal-header { padding: 16px 20px; border-bottom: 1px solid #f2f2f7; display: flex; align-items: center; justify-content: space-between; }
+  .modal-header h2 { font-size: 20px; font-weight: 700; color: #1c1c1e; }
+  .modal-close { background: #f2f2f7; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 18px; color: #8e8e93; display: flex; align-items: center; justify-content: center; }
+  .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+  .modal-body .info { font-size: 14px; color: #8e8e93; margin-bottom: 14px; }
+  .edit-row { display: grid; grid-template-columns: 22px 1fr 36px; align-items: center; gap: 8px; padding: 6px 0; }
+  .edit-row .n { font-size: 12px; color: #8e8e93; text-align: right; font-weight: 600; }
+  .edit-row input { width: 100%; font-size: 16px; background: #f2f2f7; border: none; border-radius: 10px; padding: 10px 12px; color: #1c1c1e; }
+  .edit-row input:focus { outline: none; background: #e8e8f0; }
+  .edit-row .del { background: none; border: 1px solid #ffe0e0; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px; color: #ff3b30; display: flex; align-items: center; justify-content: center; }
+  .edit-row .del:active { background: #ff3b30; color: white; }
+  .edit-row .del:disabled { opacity: 0.3; cursor: not-allowed; }
+  .modal-footer { padding: 14px 20px; border-top: 1px solid #f2f2f7; display: flex; gap: 10px; }
+  .btn { flex: 1; font-size: 16px; font-weight: 600; padding: 14px 12px; cursor: pointer; border: none; border-radius: 14px; background: #f2f2f7; color: #1c1c1e; }
+  .btn-primary { background: #5856d6; color: white; }
+  .btn:active { opacity: 0.8; }
+  .add-habit-btn { width: 100%; margin-top: 12px; font-size: 15px; font-weight: 600; padding: 13px; cursor: pointer; border: 2px dashed #c7c7cc; border-radius: 14px; background: transparent; color: #5856d6; }
+  .add-habit-btn:active { background: rgba(88,86,214,0.06); }
 </style>
 </head>
 <body>
-<div class="grain"></div>
 <div class="wrap">
-  <header>
-    <h1 id="headerTitle">Habit Tracker</h1>
-    <div class="month-nav" id="habitsNav">
-      <button id="prevMonth">‹</button>
-      <div class="month-label" id="monthLabel">—</div>
-      <button id="nextMonth">›</button>
-      <button class="settings-btn" id="openSettings" title="Configurer les habitudes">⚙</button>
-    </div>
-  </header>
 
-  <div class="tab-panel active" id="panel-habits">
-    <div class="sheet">
-      <div class="habits-title">HABITS :</div>
-      <div id="app" class="loading">Chargement…</div>
+  <div class="topbar">
+    <button class="topbar-menu">☰</button>
+    <div class="topbar-actions">
+      <button class="topbar-action-btn">💡</button>
+      <span class="topbar-dots">•••</span>
     </div>
-    <div class="hint">Tape une case : 1× vert (fait) · 2× rouge (raté) · 3× vide<br>Clique ⚙ pour configurer tes habitudes</div>
   </div>
 
-  <div class="tab-panel" id="panel-fruits">
-    <div class="fruits-header">
-      <div>
-        <div class="week-label" id="weekLabel">S—</div>
-        <div class="week-dates" id="weekDates">—</div>
+  <div class="page-title" id="pageTitle">Aujourd'hui</div>
+
+  <!-- Today panel (default) -->
+  <div class="tab-panel active" id="panel-today">
+    <div class="section">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Habitude</span>
+          <span class="card-count"><span id="habitsCountBadge">—</span> ↓</span>
+        </div>
+        <div id="habitsListToday"></div>
       </div>
-      <div class="fruits-week-nav">
-        <button id="prevWeek">‹</button>
-        <button id="nextWeek">›</button>
+    </div>
+  </div>
+
+  <!-- Calendar panel -->
+  <div class="tab-panel" id="panel-calendar">
+    <div class="calendar-header">
+      <div class="calendar-month-nav">
+        <button class="calendar-nav-btn" id="prevMonth">‹</button>
+        <div class="calendar-month-label" id="monthLabel">—</div>
+        <button class="calendar-nav-btn" id="nextMonth">›</button>
+      </div>
+      <button class="settings-btn" id="openSettings" title="Configurer les habitudes">⚙</button>
+    </div>
+    <div class="sheet">
+      <div id="app" class="loading">Chargement…</div>
+    </div>
+    <div class="hint">Tape une case : 1× ✓ fait · 2× ✗ raté · 3× vide</div>
+  </div>
+
+  <!-- Fruits panel -->
+  <div class="tab-panel" id="panel-fruits">
+    <div class="fruits-header-wrap">
+      <div class="week-nav-row">
+        <div>
+          <div class="week-label-big" id="weekLabel">S—</div>
+          <div class="week-dates-small" id="weekDates">—</div>
+        </div>
+        <div class="week-nav-btns">
+          <button class="week-nav-btn" id="prevWeek">‹</button>
+          <button class="week-nav-btn" id="nextWeek">›</button>
+        </div>
       </div>
     </div>
     <div class="counter-big">
@@ -177,9 +247,7 @@
       <div class="progress-bar"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
     </div>
     <div class="season-block">
-      <div class="season-block-header">
-        <span class="season-block-title">🌱 De saison en <span id="seasonMonth">—</span></span>
-      </div>
+      <div class="season-block-title">🌱 De saison en <span id="seasonMonth">—</span></div>
       <div id="seasonStrip" class="season-strip"></div>
     </div>
     <div class="add-form-wrap">
@@ -194,21 +262,44 @@
 
 </div>
 
-<div class="tabs">
-  <button class="tab active" data-tab="habits">⚪ Habits</button>
-  <button class="tab" data-tab="fruits">🥕 Fruits & Légumes</button>
-</div>
+<!-- FAB -->
+<button class="fab" id="fabBtn">+</button>
 
+<!-- Bottom nav -->
+<nav class="bottom-nav">
+  <!-- Today / Habits -->
+  <button class="nav-btn active" data-tab="today">
+    <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+  </button>
+  <!-- Calendar -->
+  <button class="nav-btn" data-tab="calendar">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+  </button>
+  <!-- Focus (placeholder) -->
+  <button class="nav-btn" data-tab="focus">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+  </button>
+  <!-- Fruits -->
+  <button class="nav-btn" data-tab="fruits">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+  </button>
+  <!-- More / Settings -->
+  <button class="nav-btn" data-tab="more">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1" fill="#8e8e93" stroke="none"/><circle cx="19" cy="12" r="1" fill="#8e8e93" stroke="none"/><circle cx="5" cy="12" r="1" fill="#8e8e93" stroke="none"/></svg>
+  </button>
+</nav>
+
+<!-- Settings modal -->
 <div class="modal-backdrop" id="modalBackdrop">
   <div class="modal">
     <div class="modal-header">
-      <h2>Configure tes habitudes</h2>
+      <h2>Mes habitudes</h2>
       <button class="modal-close" id="modalClose">×</button>
     </div>
     <div class="modal-body">
-      <div class="info">Ajoute, renomme ou supprime tes habitudes. Entre 1 et 12 max.</div>
+      <div class="info">Ajoute, renomme ou supprime tes habitudes (1 à 12 max).</div>
       <div id="editList"></div>
-      <button class="btn" id="addHabit" style="margin-top:10px;flex:none;width:100%;">+ Ajouter une habitude</button>
+      <button class="add-habit-btn" id="addHabit">+ Ajouter une habitude</button>
     </div>
     <div class="modal-footer">
       <button class="btn" id="cancelEdit">Annuler</button>
@@ -216,6 +307,7 @@
     </div>
   </div>
 </div>
+
 <script type="module" src="js/main.js"></script>
 </body>
 </html>
