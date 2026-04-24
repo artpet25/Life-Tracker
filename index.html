@@ -192,6 +192,39 @@
   .btn:active { opacity: 0.8; }
   .add-habit-btn { width: 100%; margin-top: 12px; font-size: 15px; font-weight: 600; padding: 13px; cursor: pointer; border: 2px dashed #c7c7cc; border-radius: 14px; background: transparent; color: #5856d6; }
   .add-habit-btn:active { background: rgba(88,86,214,0.06); }
+
+  /* Streak widget */
+  .streak-widget { display: flex; align-items: center; gap: 14px; padding: 12px 16px 2px; }
+  .streak-flame { font-size: 38px; line-height: 1; }
+  .streak-info { display: flex; flex-direction: column; }
+  .streak-count { font-size: 32px; font-weight: 800; color: #ff6b35; line-height: 1; }
+  .streak-label { font-size: 12px; color: #8e8e93; margin-top: 2px; }
+  .streak-zero .streak-count { color: #c7c7cc; }
+
+  /* Week strip */
+  .week-strip { display: grid; grid-template-columns: repeat(7, 1fr); padding: 10px 16px 6px; gap: 2px; }
+  .week-day { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .week-day-label { font-size: 11px; font-weight: 600; color: #8e8e93; }
+  .week-day-num { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #c7c7cc; }
+  .week-day-num.past { background: #f2f2f7; color: #8e8e93; }
+  .week-day-num.done { background: #1c1c1e; color: white; }
+  .week-day-num.today { border: 2px solid #c7c7cc; color: #8e8e93; }
+  .week-day-num.today.done { background: #1c1c1e; color: white; border: none; }
+
+  /* Monthly calendar grid */
+  .cal-grid { padding: 4px 0 2px; }
+  .cal-row-headers { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 8px; }
+  .cal-row-header { text-align: center; font-size: 12px; font-weight: 700; color: #8e8e93; padding: 2px 0; }
+  .cal-days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .cal-cell { aspect-ratio: 1; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; }
+  .cal-cell.blank { background: transparent; }
+  .cal-cell.future { color: #c7c7cc; }
+  .cal-cell.empty { color: #1c1c1e; background: #f2f2f7; }
+  .cal-cell.weekend.empty { color: #ff3b30; }
+  .cal-cell.done { background: #1c1c1e; color: white; }
+  .cal-cell.partial { background: #34c759; color: white; opacity: 0.75; }
+  .cal-cell.fail { background: #ff3b30; color: white; }
+  .cal-cell.today { box-shadow: 0 0 0 2.5px #5856d6; }
 </style>
 </head>
 <body>
@@ -209,6 +242,8 @@
 
   <!-- Today panel (default) -->
   <div class="tab-panel active" id="panel-today">
+    <div id="streakWidget" class="streak-widget"></div>
+    <div id="weekStrip" class="week-strip"></div>
     <div id="pendingSection" class="section"></div>
     <div id="doneSection" class="section"></div>
   </div>
@@ -220,6 +255,22 @@
         <button class="calendar-nav-btn" id="prevMonth">‹</button>
         <div class="calendar-month-label" id="monthLabel">—</div>
         <button class="calendar-nav-btn" id="nextMonth">›</button>
+      </div>
+    </div>
+    <div class="section">
+      <div class="card">
+        <div id="calGrid" class="cal-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Focus panel — cercle de progression -->
+  <div class="tab-panel" id="panel-focus">
+    <div class="calendar-header">
+      <div class="calendar-month-nav">
+        <button class="calendar-nav-btn" id="prevMonthFocus">‹</button>
+        <div class="calendar-month-label" id="monthLabelFocus">—</div>
+        <button class="calendar-nav-btn" id="nextMonthFocus">›</button>
       </div>
       <button class="settings-btn" id="openSettings" title="Configurer les habitudes">⚙</button>
     </div>
@@ -288,7 +339,7 @@
   </button>
   <!-- Fruits -->
   <button class="nav-btn" data-tab="fruits">
-    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5C9.8 3.5 7 6 7 10c0 4.5 3 8 5 9.5 2-1.5 5-5 5-9.5 0-4-2.8-6.5-5-6.5z"/><path d="M12 3.5C12.5 2 14.5 1.5 15.5 2.5"/></svg>
   </button>
   <!-- More / Settings -->
   <button class="nav-btn" data-tab="more">
