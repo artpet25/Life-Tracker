@@ -13,9 +13,16 @@ const state = {
 };
 
 const app = document.getElementById('app');
-const monthLabel = document.getElementById('monthLabel');
 const modalBackdrop = document.getElementById('modalBackdrop');
 const editList = document.getElementById('editList');
+
+function updateAllMonthLabels() {
+  const lbl = `${MONTHS_FR[state.month]} ${state.year}`;
+  const ml = document.getElementById('monthLabel');
+  const mlf = document.getElementById('monthLabelFocus');
+  if (ml) ml.textContent = lbl;
+  if (mlf) mlf.textContent = lbl;
+}
 
 function dataKey(y, m) { return `habits:v4:${y}-${String(m+1).padStart(2,'0')}`; }
 function daysInMonth(y, m) { return new Date(y, m+1, 0).getDate(); }
@@ -44,7 +51,7 @@ async function loadMonth() {
 async function saveMonth() { try { await window.storage.set(dataKey(state.year, state.month), JSON.stringify(state.data)); } catch(e) {} }
 
 function render() {
-  monthLabel.textContent = `${MONTHS_FR[state.month]} ${state.year}`;
+  updateAllMonthLabels();
   const days = daysInMonth(state.year, state.month);
   const today = new Date();
   const isCurrentMonth = today.getFullYear() === state.year && today.getMonth() === state.month;
@@ -155,7 +162,7 @@ async function saveSettings() {
     }
     await saveMonth();
   }
-  state.habits = newHabits; await saveHabits(); render(); renderTodayHabits(); closeSettings();
+  state.habits = newHabits; await saveHabits(); render(); renderCalendarGrid(); renderTodayHabits(); renderWeekStrip(); closeSettings();
 }
 
 document.getElementById('openSettings').addEventListener('click', openSettings);
@@ -165,10 +172,111 @@ document.getElementById('saveEdit').addEventListener('click', saveSettings);
 document.getElementById('addHabit').addEventListener('click', () => { if (state.editBuffer.length < MAX_HABITS) { state.editBuffer.push(''); renderEditList(); } });
 modalBackdrop.addEventListener('click', e => { if (e.target === modalBackdrop) closeSettings(); });
 
-document.getElementById('prevMonth').addEventListener('click', async () => { state.month--; if (state.month < 0) { state.month=11; state.year--; } await loadMonth(); render(); });
-document.getElementById('nextMonth').addEventListener('click', async () => { state.month++; if (state.month > 11) { state.month=0; state.year++; } await loadMonth(); render(); });
+document.getElementById('prevMonth').addEventListener('click', async () => { state.month--; if (state.month < 0) { state.month=11; state.year--; } await loadMonth(); renderCalendarGrid(); });
+document.getElementById('nextMonth').addEventListener('click', async () => { state.month++; if (state.month > 11) { state.month=0; state.year++; } await loadMonth(); renderCalendarGrid(); });
+document.getElementById('prevMonthFocus').addEventListener('click', async () => { state.month--; if (state.month < 0) { state.month=11; state.year--; } await loadMonth(); render(); });
+document.getElementById('nextMonthFocus').addEventListener('click', async () => { state.month++; if (state.month > 11) { state.month=0; state.year++; } await loadMonth(); render(); });
 
 document.getElementById('fabBtn').addEventListener('click', openSettings);
+
+// ── Calendar grid ────────────────────────────────────────────────────────────
+
+function renderCalendarGrid() {
+  const gridEl = document.getElementById('calGrid');
+  if (!gridEl) return;
+  updateAllMonthLabels();
+
+  const days = daysInMonth(state.year, state.month);
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === state.year && today.getMonth() === state.month;
+  const todayDay = isCurrentMonth ? today.getDate() : -1;
+  const isFutureMonth = (state.year > today.getFullYear()) || (state.year === today.getFullYear() && state.month > today.getMonth());
+  const activeCount = state.habits.filter(h => h.trim()).length;
+
+  const firstDow = new Date(state.year, state.month, 1).getDay();
+  const offset = firstDow === 0 ? 6 : firstDow - 1;
+  const DAY_LABELS = ['L','M','M','J','V','S','D'];
+
+  let html = '<div class="cal-row-headers">';
+  DAY_LABELS.forEach(d => { html += `<div class="cal-row-header">${d}</div>`; });
+  html += '</div><div class="cal-days-grid">';
+  for (let i = 0; i < offset; i++) html += '<div class="cal-cell blank"></div>';
+
+  for (let d = 1; d <= days; d++) {
+    const dow = new Date(state.year, state.month, d).getDay();
+    const isWeekend = dow === 0 || dow === 6;
+    const isToday = d === todayDay;
+    const isFuture = isFutureMonth || (isCurrentMonth && d > todayDay);
+    let cls = 'cal-cell' + (isWeekend ? ' weekend' : '') + (isToday ? ' today' : '');
+    if (isFuture) {
+      cls += ' future';
+    } else {
+      const dayData = state.data[d] || {};
+      const doneCount = Object.values(dayData).filter(v => v === 1).length;
+      const failCount = Object.values(dayData).filter(v => v === 2).length;
+      if (activeCount > 0 && doneCount >= activeCount) cls += ' done';
+      else if (doneCount > 0) cls += ' partial';
+      else if (failCount > 0) cls += ' fail';
+      else cls += ' empty';
+    }
+    html += `<div class="${cls}">${d}</div>`;
+  }
+  html += '</div>';
+  gridEl.innerHTML = html;
+}
+
+// ── Streak & week strip ───────────────────────────────────────────────────────
+
+function calcStreak() {
+  const today = new Date();
+  if (!state.habits.filter(h => h.trim()).length) return 0;
+  const todayDay = today.getDate();
+  const todayDone = Object.values(state.data[todayDay] || {}).some(v => v === 1);
+  let streak = 0;
+  for (let d = todayDone ? todayDay : todayDay - 1; d >= 1; d--) {
+    if (Object.values(state.data[d] || {}).some(v => v === 1)) streak++;
+    else break;
+  }
+  return streak;
+}
+
+function renderWeekStrip() {
+  const stripEl = document.getElementById('weekStrip');
+  const widgetEl = document.getElementById('streakWidget');
+  if (!stripEl) return;
+
+  const today = new Date();
+  const dow = today.getDay();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+  const DAY_LABELS = ['L','M','M','J','V','S','D'];
+
+  let html = '';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const dayNum = d.getDate();
+    const sameMonth = d.getFullYear() === state.year && d.getMonth() === state.month;
+    const isToday = d.toDateString() === today.toDateString();
+    const isFuture = d > today;
+    let cls = 'week-day-num';
+    if (isToday) {
+      const hasDone = sameMonth && Object.values(state.data[dayNum] || {}).some(v => v === 1);
+      cls += hasDone ? ' done' : ' today';
+    } else if (!isFuture) {
+      const hasDone = sameMonth && Object.values(state.data[dayNum] || {}).some(v => v === 1);
+      cls += hasDone ? ' done' : ' past';
+    }
+    html += `<div class="week-day"><div class="week-day-label">${DAY_LABELS[i]}</div><div class="${cls}">${dayNum}</div></div>`;
+  }
+  stripEl.innerHTML = html;
+
+  if (widgetEl) {
+    const streak = calcStreak();
+    const label = streak <= 1 ? 'jour de suite' : 'jours de suite';
+    widgetEl.innerHTML = `<div class="streak-flame">${streak > 0 ? '🔥' : '💧'}</div><div class="streak-info${streak === 0 ? ' streak-zero' : ''}"><div class="streak-count">${streak}</div><div class="streak-label">${streak === 0 ? 'Commence aujourd\'hui !' : label}</div></div>`;
+  }
+}
 
 // ── Today view ────────────────────────────────────────────────────────────────
 
@@ -301,6 +409,7 @@ function renderTodayHabits() {
         if (Object.keys(state.data[todayDay] || {}).length === 0) delete state.data[todayDay];
         saveMonth();
         renderTodayHabits();
+        renderWeekStrip();
       }, { once: true });
     });
   });
@@ -314,7 +423,6 @@ document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => btn.addEventListe
   const id = btn.dataset.tab;
 
   if (id === 'more') { openSettings(); return; }
-  if (id === 'focus') return;
 
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -327,7 +435,9 @@ document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => btn.addEventListe
   if (pageTitleEl) pageTitleEl.textContent = PAGE_TITLES[id] || '';
 
   if (id === 'fruits') { await loadFruits(); renderFruits(); }
-  else if (id === 'today') { renderTodayHabits(); }
+  else if (id === 'today') { renderTodayHabits(); renderWeekStrip(); }
+  else if (id === 'calendar') { await loadMonth(); renderCalendarGrid(); }
+  else if (id === 'focus') { render(); }
 }));
 
 // ── Fruits ─────────────────────────────────────────────────────────────────────
@@ -477,5 +587,7 @@ document.getElementById('nextWeek').addEventListener('click',async()=>{
   await loadHabits();
   await loadMonth();
   render();
+  renderCalendarGrid();
   renderTodayHabits();
+  renderWeekStrip();
 })();
