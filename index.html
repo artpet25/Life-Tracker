@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Life Tracker">
+<meta name="theme-color" content="#1a1f1a">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="manifest" href="manifest.json">
+<title>Life Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="js/app.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { background: #f4f1ea; color: #1a1f1a; font-family: 'JetBrains Mono', monospace; min-height: 100vh; overflow-x: hidden; }
+  .grain { position: fixed; inset: 0; pointer-events: none; opacity: 0.35; z-index: 1; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.2'/%3E%3C/svg%3E"); }
+  .wrap { position: relative; z-index: 2; max-width: 720px; margin: 0 auto; padding: 18px 12px 90px; }
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 0 6px; gap: 8px; }
+  header h1 { font-family: 'Caveat', cursive; font-weight: 700; font-size: 30px; letter-spacing: 0.02em; }
+  .month-nav { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .month-nav button, .settings-btn { background: none; border: 1px solid #1a1f1a; color: #1a1f1a; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; font-family: inherit; }
+  .month-nav button:active, .settings-btn:active { background: #1a1f1a; color: #f4f1ea; }
+  .month-label { min-width: 90px; text-align: center; text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; font-weight: 600; }
+  .sheet { background: #fafaf3; border: 1px solid rgba(26,31,26,0.15); padding: 14px 6px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); position: relative; }
+  .habits-title { font-family: 'Caveat', cursive; font-weight: 700; font-size: 22px; letter-spacing: 0.05em; text-decoration: underline; text-underline-offset: 3px; padding: 0 4px 10px 8px; }
+  .ring-container { position: relative; width: 100%; aspect-ratio: 1; margin: 0 auto; }
+  svg { width: 100%; height: 100%; display: block; }
+  .habits-list { position: absolute; left: 0; top: 0; width: 42%; height: 100%; pointer-events: none; z-index: 3; }
+  .habit-line { position: absolute; left: 0; width: 100%; height: 0; pointer-events: auto; }
+  .habit-line-inner { display: grid; grid-template-columns: 18px 1fr; align-items: end; gap: 3px; width: 100%; font-family: 'Caveat', cursive; font-size: clamp(11px, 2.6vw, 15px); line-height: 1; transform: translateY(-100%); padding-bottom: 2px; padding-left: 4px; }
+  .habit-num { font-weight: 700; text-align: right; padding-right: 2px; }
+  .habit-name { width: 100%; min-width: 0; font-family: 'Caveat', cursive; font-size: inherit; background: transparent; border: none; color: inherit; font-weight: 500; padding: 0 2px 1px; }
+  .habit-name:focus { outline: none; background: rgba(255,220,100,0.3); }
+  .habit-name::placeholder { color: rgba(26,31,26,0.3); font-style: italic; }
+  .center-month-label { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; font-family: 'Caveat', cursive; pointer-events: none; z-index: 2; }
+  .center-month-label .lbl { font-size: 10px; letter-spacing: 0.1em; color: #666; font-family: 'JetBrains Mono', monospace; }
+  .center-month-label .mo { font-size: clamp(16px, 4vw, 24px); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; margin-top: 2px; }
+  .center-month-label .yr { font-size: clamp(14px, 3.5vw, 20px); font-weight: 500; margin-top: 2px; }
+  .center-month-label .pct { font-size: 11px; color: #8b7355; margin-top: 4px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em; }
+  .day-num { font-family: 'JetBrains Mono', monospace; font-size: 10px; fill: #1a1f1a; font-weight: 600; }
+  .day-num-weekend { fill: #c44545; font-weight: 700; }
+  .cell { cursor: pointer; transition: fill 0.12s ease; stroke: #1a1f1a; stroke-width: 0.7; }
+  .cell-empty { fill: #fafaf3; } .cell-empty-weekend { fill: #f0e9d8; } .cell-done { fill: #5c8a4a; } .cell-fail { fill: #c44545; }
+  .cell-future { fill: #ebe5d8; cursor: not-allowed; opacity: 0.6; } .cell-future-weekend { fill: #e0d8c4; cursor: not-allowed; opacity: 0.6; }
+  .legend { display: flex; gap: 16px; justify-content: center; margin-top: 14px; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: #8b7355; }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-swatch { width: 10px; height: 10px; border: 1px solid #1a1f1a; }
+  .hint { text-align: center; font-family: 'Caveat', cursive; font-size: 16px; color: #666; margin-top: 16px; line-height: 1.3; }
+  .quote { margin-top: 24px; border-top: 1px dashed rgba(26,31,26,0.2); font-family: 'Caveat', cursive; text-align: center; font-size: 17px; color: #5a5a52; font-weight: 500; padding: 16px 20px 0; }
+  @keyframes pop { 0%{transform:scale(1)} 50%{transform:scale(1.12)} 100%{transform:scale(1)} }
+  .cell.popping { animation: pop 0.22s ease; transform-origin: center; transform-box: fill-box; }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(26,31,26,0.5); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
+  .modal-backdrop.open { display: flex; }
+  .modal { background: #fafaf3; border: 1px solid #1a1f1a; width: 100%; max-width: 420px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+  .modal-header { padding: 14px 18px; border-bottom: 1px solid rgba(26,31,26,0.15); display: flex; align-items: center; justify-content: space-between; }
+  .modal-header h2 { font-family: 'Caveat', cursive; font-size: 24px; font-weight: 700; }
+  .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: #1a1f1a; padding: 4px 8px; }
+  .modal-body { padding: 14px 18px; overflow-y: auto; flex: 1; }
+  .modal-body .info { font-family: 'Caveat', cursive; font-size: 15px; color: #666; margin-bottom: 10px; line-height: 1.3; }
+  .edit-row { display: grid; grid-template-columns: 22px 1fr 28px; align-items: center; gap: 8px; padding: 4px 0; }
+  .edit-row .n { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8b7355; text-align: right; }
+  .edit-row input { width: 100%; font-family: 'Caveat', cursive; font-size: 17px; background: #f4f1ea; border: 1px solid rgba(26,31,26,0.2); padding: 6px 8px; color: #1a1f1a; }
+  .edit-row input:focus { outline: none; border-color: #1a1f1a; }
+  .edit-row .del { background: none; border: 1px solid rgba(26,31,26,0.3); width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 14px; color: #c44545; display: flex; align-items: center; justify-content: center; }
+  .edit-row .del:active { background: #c44545; color: white; } .edit-row .del:disabled { opacity: 0.3; cursor: not-allowed; }
+  .modal-footer { padding: 12px 18px; border-top: 1px solid rgba(26,31,26,0.15); display: flex; gap: 8px; }
+  .btn { flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; padding: 10px 12px; cursor: pointer; border: 1px solid #1a1f1a; background: #fafaf3; color: #1a1f1a; }
+  .btn-primary { background: #1a1f1a; color: #fafaf3; } .btn:active { opacity: 0.8; }
+  .loading { text-align: center; padding: 40px 20px; font-family: 'Caveat', cursive; font-size: 18px; color: #8b7355; }
+  .tabs { position: fixed; bottom: 0; left: 0; right: 0; display: flex; background: #fafaf3; border-top: 1px solid rgba(26,31,26,0.2); z-index: 50; padding-bottom: env(safe-area-inset-bottom, 0); box-shadow: 0 -2px 8px rgba(0,0,0,0.04); }
+  .tab { flex: 1; background: none; border: none; padding: 12px 8px 14px; cursor: pointer; font-family: 'Caveat', cursive; font-size: 18px; font-weight: 600; color: #8b7355; border-top: 3px solid transparent; transition: all 0.2s; }
+  .tab.active { color: #1a1f1a; border-top-color: #1a1f1a; }
+  .tab-panel { display: none; } .tab-panel.active { display: block; }
+  .fruits-header { display: flex; align-items: center; justify-content: space-between; padding: 0 6px 12px; }
+  .fruits-week-nav { display: flex; align-items: center; gap: 6px; }
+  .fruits-week-nav button { background: none; border: 1px solid #1a1f1a; color: #1a1f1a; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; font-family: inherit; }
+  .fruits-week-nav button:active { background: #1a1f1a; color: #f4f1ea; }
+  .week-label { font-family: 'Caveat', cursive; font-size: 22px; font-weight: 700; min-width: 80px; text-align: center; }
+  .week-dates { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #8b7355; letter-spacing: 0.05em; }
+  .counter-big { text-align: center; padding: 14px 12px; background: #fafaf3; border: 1px solid rgba(26,31,26,0.15); margin-bottom: 14px; }
+  .counter-triple { display: grid; grid-template-columns: 1fr 1px 1fr 1px 1fr; gap: 10px; align-items: center; }
+  .counter-triple .divider { background: rgba(26,31,26,0.15); height: 40px; width: 1px; justify-self: center; }
+  .counter-big .num { font-family: 'Caveat', cursive; font-size: 38px; font-weight: 700; color: #1a1f1a; line-height: 1; }
+  .counter-big .num .goal { color: #8b7355; font-size: 26px; }
+  .counter-big .label { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.15em; color: #8b7355; text-transform: uppercase; margin-top: 4px; }
+  .progress-bar { margin-top: 12px; height: 4px; background: rgba(26,31,26,0.1); position: relative; overflow: hidden; }
+  .progress-bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: #5c8a4a; transition: width 0.3s ease; }
+  .add-form-wrap { position: relative; margin-bottom: 10px; }
+  .suggestions { position: absolute; top: 100%; left: 0; right: 0; background: #fafaf3; border: 1px solid rgba(26,31,26,0.2); border-top: none; max-height: 220px; overflow-y: auto; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  .suggestions.hidden { display: none; }
+  .suggestion { display: flex; align-items: center; gap: 10px; padding: 8px 12px; cursor: pointer; font-family: 'Caveat', cursive; font-size: 17px; border-bottom: 1px dashed rgba(26,31,26,0.1); }
+  .suggestion:last-child { border-bottom: none; }
+  .suggestion:hover, .suggestion.highlighted { background: rgba(92,138,74,0.08); }
+  .suggestion .emoji { font-size: 19px; flex-shrink: 0; } .suggestion .match { font-weight: 700; } .suggestion .sugg-name { flex: 1; min-width: 0; }
+  .fruit-item .qty-badge { display: inline-block; background: #1a1f1a; color: #fafaf3; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 10px; margin-left: 4px; letter-spacing: 0.05em; }
+  .add-form { display: flex; gap: 6px; padding: 10px 6px; border: 1px solid rgba(26,31,26,0.15); background: #fafaf3; margin-bottom: 10px; }
+  .add-form input { flex: 1; font-family: 'Caveat', cursive; font-size: 18px; background: transparent; border: none; border-bottom: 1px solid rgba(26,31,26,0.3); padding: 4px 6px; color: #1a1f1a; min-width: 0; }
+  .add-form input:focus { outline: none; border-bottom-color: #1a1f1a; }
+  .add-form button { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; padding: 6px 14px; cursor: pointer; border: 1px solid #1a1f1a; background: #1a1f1a; color: #fafaf3; flex-shrink: 0; }
+  .add-form button:active { opacity: 0.8; }
+  .fruits-list { padding: 4px 0 0; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 6px 6px; margin-top: 8px; border-bottom: 2px solid #1a1f1a; }
+  .section-header:first-child { margin-top: 0; }
+  .section-title { font-family: 'Caveat', cursive; font-size: 22px; font-weight: 700; letter-spacing: 0.02em; }
+  .section-count { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; color: #8b7355; background: #fafaf3; padding: 3px 9px; border-radius: 10px; border: 1px solid rgba(26,31,26,0.2); }
+  .fruit-item { display: grid; grid-template-columns: 22px 1fr auto 26px 24px; align-items: center; gap: 6px; padding: 8px 4px; border-bottom: 1px dashed rgba(26,31,26,0.15); font-family: 'Caveat', cursive; font-size: 18px; }
+  .fruit-item:last-child { border-bottom: none; }
+  .fruit-item .type-toggle { background: none; border: 1px dashed rgba(26,31,26,0.25); width: 26px; height: 26px; cursor: pointer; font-size: 13px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 0; opacity: 0.55; transition: opacity 0.15s; }
+  .fruit-item .type-toggle:active { opacity: 1; background: rgba(26,31,26,0.08); }
+  .fruit-item .idx { font-weight: 700; color: #8b7355; font-size: 16px; text-align: right; }
+  .fruit-item .name-wrap { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .fruit-item .emoji { font-size: 20px; flex-shrink: 0; }
+  .fruit-item .name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fruit-item .qty-controls { display: flex; align-items: center; gap: 4px; }
+  .fruit-item .qty-btn { background: #fafaf3; border: 1px solid rgba(26,31,26,0.3); width: 24px; height: 24px; cursor: pointer; font-family: inherit; font-size: 14px; color: #1a1f1a; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+  .fruit-item .qty-btn:active { background: #1a1f1a; color: #fafaf3; }
+  .fruit-item .qty-num { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; min-width: 22px; text-align: center; }
+  .fruit-item .del { background: none; border: 1px solid rgba(26,31,26,0.2); width: 24px; height: 24px; cursor: pointer; font-size: 12px; color: #c44545; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .fruit-item .del:active { background: #c44545; color: white; }
+  .fruits-empty { text-align: center; padding: 30px 20px; font-family: 'Caveat', cursive; font-size: 18px; color: #8b7355; font-style: italic; }
+  .season-block { margin-bottom: 14px; padding: 10px 10px 12px; background: linear-gradient(135deg,#e8ecdb 0%,#dce5c8 100%); border: 1px solid rgba(92,138,74,0.3); position: relative; }
+  .season-block-header { position: relative; margin-bottom: 8px; }
+  .season-block-title { font-family: 'Caveat', cursive; font-size: 18px; font-weight: 700; color: #3d5a2a; text-transform: capitalize; }
+  .season-strip { position: relative; display: flex; flex-wrap: wrap; gap: 6px; }
+  .season-chip { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; background: rgba(255,255,255,0.7); border: 1px solid rgba(92,138,74,0.4); border-radius: 16px; cursor: pointer; font-family: 'Caveat', cursive; font-size: 15px; color: #1a1f1a; transition: all 0.15s; }
+  .season-chip:active { background: #5c8a4a; color: white; transform: scale(0.96); }
+  .season-chip .emoji { font-size: 15px; }
+  .season-empty { font-family: 'Caveat', cursive; font-size: 15px; color: #5c8a4a; font-style: italic; padding: 4px 0; }
+  .season-badge { display: inline-block; font-size: 13px; margin-left: 2px; filter: saturate(1.3); }
+  .fruit-item.in-season { background: linear-gradient(to right,rgba(92,138,74,0.05),transparent 60%); }
+  .fruit-item.in-season .name { color: #3d5a2a; }
+  .sugg-name { flex: 1; }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div class="wrap">
+  <header>
+    <h1 id="headerTitle">Habit Tracker</h1>
+    <div class="month-nav" id="habitsNav">
+      <button id="prevMonth">‹</button>
+      <div class="month-label" id="monthLabel">—</div>
+      <button id="nextMonth">›</button>
+      <button class="settings-btn" id="openSettings" title="Configurer les habitudes">⚙</button>
+    </div>
+  </header>
+
+  <div class="tab-panel active" id="panel-habits">
+    <div class="sheet">
+      <div class="habits-title">HABITS :</div>
+      <div id="app" class="loading">Chargement…</div>
+    </div>
+    <div class="hint">Tape une case : 1× vert (fait) · 2× rouge (raté) · 3× vide<br>Clique ⚙ pour configurer tes habitudes</div>
+  </div>
+
+  <div class="tab-panel" id="panel-fruits">
+    <div class="fruits-header">
+      <div>
+        <div class="week-label" id="weekLabel">S—</div>
+        <div class="week-dates" id="weekDates">—</div>
+      </div>
+      <div class="fruits-week-nav">
+        <button id="prevWeek">‹</button>
+        <button id="nextWeek">›</button>
+      </div>
+    </div>
+    <div class="counter-big">
+      <div class="counter-triple">
+        <div><div class="num"><span id="fruitsOnlyCount">0</span></div><div class="label">🍎 Fruits</div></div>
+        <div class="divider"></div>
+        <div><div class="num"><span id="veggiesCount">0</span></div><div class="label">🥕 Légumes</div></div>
+        <div class="divider"></div>
+        <div><div class="num"><span id="fruitsCount">0</span><span class="goal">/30</span></div><div class="label">Total</div></div>
+      </div>
+      <div class="progress-bar"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
+    </div>
+    <div class="season-block">
+      <div class="season-block-header">
+        <span class="season-block-title">🌱 De saison en <span id="seasonMonth">—</span></span>
+      </div>
+      <div id="seasonStrip" class="season-strip"></div>
+    </div>
+    <div class="add-form-wrap">
+      <div class="add-form">
+        <input type="text" id="fruitInput" placeholder="Ajouter un fruit ou légume…" autocomplete="off" />
+        <button id="addFruitBtn">Ajouter</button>
+      </div>
+      <div id="suggestions" class="suggestions hidden"></div>
+    </div>
+    <div id="fruitsList" class="fruits-list"></div>
+  </div>
+
+  <div class="quote">« Discipline doesn't care how you feel. »</div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="habits">⚪ Habits</button>
+  <button class="tab" data-tab="fruits">🥕 Fruits & Légumes</button>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Configure tes habitudes</h2>
+      <button class="modal-close" id="modalClose">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="info">Ajoute, renomme ou supprime tes habitudes. Entre 1 et 12 max.</div>
+      <div id="editList"></div>
+      <button class="btn" id="addHabit" style="margin-top:10px;flex:none;width:100%;">+ Ajouter une habitude</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" id="cancelEdit">Annuler</button>
+      <button class="btn btn-primary" id="saveEdit">Enregistrer</button>
+    </div>
+  </div>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
