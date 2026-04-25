@@ -43,20 +43,18 @@
   .s-flame-count { position: relative; z-index: 1; font-size: 17px; font-weight: 900; color: white; margin-top: 6px; text-shadow: 0 1px 3px rgba(160,60,0,0.5); }
   .s-streak-label { font-size: 10px; font-weight: 700; color: #ff6b35; text-transform: uppercase; letter-spacing: 0.04em; }
   .streak-sep { width: 1px; height: 48px; background: #f2f2f7; flex-shrink: 0; }
-  .streak-week { display: flex; gap: 4px; flex: 1; justify-content: space-between; }
-  .s-day { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .streak-week { display: flex; gap: 4px; justify-content: space-between; touch-action: pan-y; }
+  .s-day { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
   .s-day-label { font-size: 10px; font-weight: 600; color: #8e8e93; }
   .s-circle-wrap { position: relative; width: 34px; height: 34px; flex-shrink: 0; }
   .s-circle-wrap svg { position: absolute; top: 0; left: 0; width: 34px; height: 34px; }
   .s-circle-inner { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); }
 
   @keyframes habitCheck { 0%{transform:scale(1)} 30%{transform:scale(1.4)} 60%{transform:scale(0.85)} 80%{transform:scale(1.08)} 100%{transform:scale(1)} }
-  @keyframes habitLeave { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(16px) scale(0.97)} }
-  @keyframes habitArrive { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
   .habit-card { background: white; border-radius: 18px; margin: 10px 16px 0; padding: 14px 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 14px; user-select: none; -webkit-user-select: none; }
   .habit-card.done-card { opacity: 0.55; }
-  .habit-card.leaving { animation: habitLeave 0.2s ease forwards; pointer-events: none; }
-  .habit-card.arriving { animation: habitArrive 0.25s ease; }
+  .streak-week-col { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .streak-week-range { font-size: 9px; font-weight: 600; color: #8e8e93; text-align: center; letter-spacing: 0.02em; }
   .habit-card-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
   .habit-card-body { flex: 1; min-width: 0; }
   .habit-card-name { font-size: 16px; font-weight: 600; color: #1c1c1e; }

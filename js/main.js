@@ -13,6 +13,17 @@ const state = {
 };
 
 let selectedDate = new Date();
+let weekOffset = 0;
+let weekSwipeStart = null, weekSwiped = false;
+
+function getWeekMonday(offset) {
+  const today = new Date();
+  const dow = today.getDay();
+  const m = new Date(today);
+  m.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1) + offset * 7);
+  m.setHours(0, 0, 0, 0);
+  return m;
+}
 
 const DAY_NAMES_FR = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 const MONTHS_SHORT_FR = ['jan.','fév.','mar.','avr.','mai','juin','juil.','août','sep.','oct.','nov.','déc.'];
@@ -280,9 +291,7 @@ function renderWeekStrip() {
   if (!widgetEl) return;
 
   const today = new Date();
-  const dow = today.getDay();
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+  const monday = getWeekMonday(weekOffset);
   const DAY_LABELS = ['L','M','M','J','V','S','D'];
   const activeCount = state.habits.filter(h => h.trim()).length;
   const R = 14, CIRC = +(2 * Math.PI * R).toFixed(2);
@@ -311,15 +320,10 @@ function renderWeekStrip() {
     let ringColor, innerBg, textColor, content;
     if (isSelected) {
       const fillColor = full ? '#34c759' : '#5856d6';
-      ringColor = fillColor;
-      innerBg = fillColor;
-      textColor = 'white';
-      content = full ? '✓' : dayNum;
+      ringColor = fillColor; innerBg = fillColor; textColor = 'white'; content = full ? '✓' : dayNum;
     } else if (isToday) {
       ringColor = full ? '#34c759' : '#5856d6';
-      innerBg = 'transparent';
-      textColor = '#1c1c1e';
-      content = dayNum;
+      innerBg = 'transparent'; textColor = '#1c1c1e'; content = dayNum;
     } else {
       const isPast = d < today;
       if (full) { ringColor = '#1c1c1e'; innerBg = 'transparent'; textColor = '#1c1c1e'; content = '✓'; }
@@ -331,7 +335,7 @@ function renderWeekStrip() {
       ? `<circle cx="17" cy="17" r="${R}" fill="none" stroke="${ringColor}" stroke-width="2.5" stroke-dasharray="${CIRC}" stroke-dashoffset="${offset}" stroke-linecap="round" transform="rotate(-90 17 17)"/>`
       : '';
 
-    daysHtml += `<div class="s-day" data-week-idx="${i}" style="cursor:pointer">
+    daysHtml += `<div class="s-day" data-week-idx="${i}">
       <span class="s-day-label">${DAY_LABELS[i]}</span>
       <div class="s-circle-wrap">
         <svg viewBox="0 0 34 34"><circle cx="17" cy="17" r="${R}" fill="none" stroke="#e5e5ea" stroke-width="2.5"/>${arcSvg}</svg>
@@ -344,23 +348,60 @@ function renderWeekStrip() {
   const label = streak === 1 ? 'Jour' : 'Jours';
   const flameColor = streak > 0 ? 'white' : '#c7c7cc';
   const labelColor = streak > 0 ? '#ff6b35' : '#c7c7cc';
+  const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+  const weekRangeLabel = weekOffset !== 0
+    ? `<div class="streak-week-range">${monday.getDate()} ${MONTHS_SHORT_FR[monday.getMonth()]} – ${sunday.getDate()} ${MONTHS_SHORT_FR[sunday.getMonth()]}</div>` : '';
+
   widgetEl.innerHTML = `<div class="streak-card">
     <div class="streak-left">
       <div class="s-flame-wrap"><span class="s-flame-bg">🔥</span><span class="s-flame-count" style="color:${flameColor}">${streak || 0}</span></div>
       <span class="s-streak-label" style="color:${labelColor}">${label}</span>
     </div>
     <div class="streak-sep"></div>
-    <div class="streak-week">${daysHtml}</div>
+    <div class="streak-week-col"><div class="streak-week" id="streakWeekDays">${daysHtml}</div>${weekRangeLabel}</div>
   </div>`;
 
-  widgetEl.querySelectorAll('.s-day').forEach((el, i) => {
-    el.addEventListener('pointerdown', e => {
+  const weekEl = widgetEl.querySelector('#streakWeekDays');
+
+  // Day tap (pointerup to not conflict with swipe)
+  weekEl.querySelectorAll('.s-day').forEach((el, i) => {
+    el.addEventListener('pointerup', e => {
+      if (weekSwiped) return;
       e.preventDefault();
-      selectedDate = weekDates[i];
-      updatePageTitleForSelectedDate();
-      renderWeekStrip();
-      renderTodayHabits();
+      const d = weekDates[i];
+      if (d.getFullYear() !== state.year || d.getMonth() !== state.month) {
+        state.year = d.getFullYear(); state.month = d.getMonth();
+        loadMonth().then(() => { selectedDate = d; updatePageTitleForSelectedDate(); renderWeekStrip(); renderTodayHabits(); });
+      } else {
+        selectedDate = d; updatePageTitleForSelectedDate(); renderWeekStrip(); renderTodayHabits();
+      }
     });
+  });
+
+  // Horizontal swipe to navigate weeks
+  weekEl.addEventListener('touchstart', e => {
+    weekSwipeStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    weekSwiped = false;
+  }, { passive: true });
+  weekEl.addEventListener('touchmove', e => {
+    if (!weekSwipeStart) return;
+    const dx = Math.abs(e.touches[0].clientX - weekSwipeStart.x);
+    const dy = Math.abs(e.touches[0].clientY - weekSwipeStart.y);
+    if (dx > dy && dx > 12) { weekSwiped = true; e.preventDefault(); }
+  }, { passive: false });
+  weekEl.addEventListener('touchend', e => {
+    if (!weekSwipeStart) return;
+    const dx = e.changedTouches[0].clientX - weekSwipeStart.x;
+    weekSwipeStart = null;
+    if (weekSwiped && Math.abs(dx) > 40) {
+      weekOffset += dx > 0 ? -1 : 1;
+      const newMonday = getWeekMonday(weekOffset);
+      const mid = new Date(newMonday); mid.setDate(newMonday.getDate() + 3);
+      if (mid.getFullYear() !== state.year || mid.getMonth() !== state.month) {
+        state.year = mid.getFullYear(); state.month = mid.getMonth();
+        loadMonth().then(() => renderWeekStrip());
+      } else { renderWeekStrip(); }
+    }
   });
 }
 
@@ -454,24 +495,35 @@ function renderTodayHabits() {
       e.preventDefault();
       e.stopPropagation();
       const card = btn.closest('.habit-card');
+      const habitIdx = parseInt(btn.dataset.habit, 10);
       btn.classList.add('animating');
       setTimeout(() => {
-        if (card) card.classList.add('leaving');
-        setTimeout(() => {
-          const habitIdx = parseInt(btn.dataset.habit, 10);
-          if (!state.data[selDay]) state.data[selDay] = {};
-          const cur = state.data[selDay][habitIdx] || 0;
-          const next = cur === 1 ? 0 : 1;
-          if (next === 0) delete state.data[selDay][habitIdx];
-          else state.data[selDay][habitIdx] = next;
-          if (Object.keys(state.data[selDay] || {}).length === 0) delete state.data[selDay];
-          saveMonth();
-          renderTodayHabits();
-          renderWeekStrip();
+        // FLIP: record current position before re-render
+        const firstRect = card ? card.getBoundingClientRect() : null;
+        if (!state.data[selDay]) state.data[selDay] = {};
+        const cur = state.data[selDay][habitIdx] || 0;
+        const next = cur === 1 ? 0 : 1;
+        if (next === 0) delete state.data[selDay][habitIdx];
+        else state.data[selDay][habitIdx] = next;
+        if (Object.keys(state.data[selDay] || {}).length === 0) delete state.data[selDay];
+        saveMonth();
+        renderTodayHabits();
+        renderWeekStrip();
+        // FLIP: animate card from old position to new position
+        if (firstRect) {
           requestAnimationFrame(() => {
-            document.querySelectorAll(`.habit-card[data-habit="${habitIdx}"]`).forEach(c => c.classList.add('arriving'));
+            const newCard = document.querySelector(`.habit-card[data-habit="${habitIdx}"]`);
+            if (!newCard) return;
+            const lastRect = newCard.getBoundingClientRect();
+            const dy = firstRect.top - lastRect.top;
+            if (Math.abs(dy) < 5) return;
+            newCard.style.cssText = `transform:translateY(${dy}px);opacity:0.4;transition:none`;
+            requestAnimationFrame(() => {
+              newCard.style.cssText = `transform:translateY(0);opacity:1;transition:transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94),opacity 0.3s ease`;
+              newCard.addEventListener('transitionend', () => { newCard.style.cssText = ''; }, { once: true });
+            });
           });
-        }, 200);
+        }
       }, 280);
     });
   });
@@ -499,7 +551,7 @@ document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => btn.addEventListe
   if (id === 'fruits') { await loadFruits(); renderFruits(); }
   else if (id === 'today') {
     const t = new Date();
-    selectedDate = t;
+    selectedDate = t; weekOffset = 0;
     if (state.year !== t.getFullYear() || state.month !== t.getMonth()) {
       state.year = t.getFullYear(); state.month = t.getMonth(); await loadMonth();
     }
