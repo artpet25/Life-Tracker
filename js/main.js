@@ -249,6 +249,8 @@ function renderWeekStrip() {
   const monday = new Date(today);
   monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
   const DAY_LABELS = ['L','M','M','J','V','S','D'];
+  const activeCount = state.habits.filter(h => h.trim()).length;
+  const R = 14, CIRC = +(2 * Math.PI * R).toFixed(2);
 
   let daysHtml = '';
   for (let i = 0; i < 7; i++) {
@@ -258,16 +260,40 @@ function renderWeekStrip() {
     const sameMonth = d.getFullYear() === state.year && d.getMonth() === state.month;
     const isToday = d.toDateString() === today.toDateString();
     const isFuture = d > today;
-    let cls = 's-circle';
-    if (isToday) {
-      const hasDone = sameMonth && Object.values(state.data[dayNum] || {}).some(v => v === 1);
-      cls += hasDone ? ' done' : ' today';
-    } else if (!isFuture) {
-      const hasDone = sameMonth && Object.values(state.data[dayNum] || {}).some(v => v === 1);
-      cls += hasDone ? ' done' : ' past';
+
+    let doneCount = 0;
+    if (sameMonth && !isFuture && activeCount > 0) {
+      doneCount = Object.values(state.data[dayNum] || {}).filter(v => v === 1).length;
     }
-    const isDone = cls.includes('done');
-    daysHtml += `<div class="s-day"><span class="s-day-label">${DAY_LABELS[i]}</span><div class="${cls}">${isDone ? '✓' : dayNum}</div></div>`;
+    const pct = activeCount > 0 ? doneCount / activeCount : 0;
+    const offset = +(CIRC * (1 - pct)).toFixed(2);
+    const full = pct === 1;
+
+    let ringColor, innerBg, textColor, content;
+    if (isToday) {
+      ringColor = '#5856d6';
+      innerBg = full ? '#5856d6' : 'transparent';
+      textColor = full ? 'white' : '#1c1c1e';
+      content = full ? '✓' : dayNum;
+    } else if (!isFuture) {
+      if (full) { ringColor = '#1c1c1e'; innerBg = '#1c1c1e'; textColor = 'white'; content = '✓'; }
+      else if (pct > 0) { ringColor = '#5856d6'; innerBg = 'transparent'; textColor = '#1c1c1e'; content = dayNum; }
+      else { ringColor = '#e5e5ea'; innerBg = 'transparent'; textColor = '#8e8e93'; content = dayNum; }
+    } else {
+      ringColor = '#e5e5ea'; innerBg = 'transparent'; textColor = '#c7c7cc'; content = dayNum;
+    }
+
+    const arcSvg = pct > 0
+      ? `<circle cx="17" cy="17" r="${R}" fill="none" stroke="${ringColor}" stroke-width="2.5" stroke-dasharray="${CIRC}" stroke-dashoffset="${offset}" stroke-linecap="round" transform="rotate(-90 17 17)"/>`
+      : '';
+
+    daysHtml += `<div class="s-day">
+      <span class="s-day-label">${DAY_LABELS[i]}</span>
+      <div class="s-circle-wrap">
+        <svg viewBox="0 0 34 34"><circle cx="17" cy="17" r="${R}" fill="none" stroke="#e5e5ea" stroke-width="2.5"/>${arcSvg}</svg>
+        <div class="s-circle-inner" style="background:${innerBg};color:${textColor};font-weight:${isToday ? 700 : 600}">${content}</div>
+      </div>
+    </div>`;
   }
 
   const streak = calcStreak();
