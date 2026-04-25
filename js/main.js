@@ -271,8 +271,8 @@ function renderWeekStrip() {
 
     let ringColor, innerBg, textColor, content;
     if (isToday) {
-      ringColor = '#5856d6';
-      innerBg = full ? '#5856d6' : 'transparent';
+      ringColor = full ? '#34c759' : '#5856d6';
+      innerBg = full ? '#34c759' : 'transparent';
       textColor = full ? 'white' : '#1c1c1e';
       content = full ? '✓' : dayNum;
     } else if (!isFuture) {
@@ -402,16 +402,24 @@ function renderTodayHabits() {
       e.stopPropagation();
       btn.classList.add('animating');
       btn.addEventListener('animationend', () => {
-        const habitIdx = parseInt(btn.dataset.habit, 10);
-        if (!state.data[todayDay]) state.data[todayDay] = {};
-        const cur = state.data[todayDay][habitIdx] || 0;
-        const next = cur === 1 ? 0 : 1;
-        if (next === 0) delete state.data[todayDay][habitIdx];
-        else state.data[todayDay][habitIdx] = next;
-        if (Object.keys(state.data[todayDay] || {}).length === 0) delete state.data[todayDay];
-        saveMonth();
-        renderTodayHabits();
-        renderWeekStrip();
+        const card = btn.closest('.habit-card');
+        if (!card) return;
+        card.classList.add('leaving');
+        card.addEventListener('animationend', () => {
+          const habitIdx = parseInt(btn.dataset.habit, 10);
+          if (!state.data[todayDay]) state.data[todayDay] = {};
+          const cur = state.data[todayDay][habitIdx] || 0;
+          const next = cur === 1 ? 0 : 1;
+          if (next === 0) delete state.data[todayDay][habitIdx];
+          else state.data[todayDay][habitIdx] = next;
+          if (Object.keys(state.data[todayDay] || {}).length === 0) delete state.data[todayDay];
+          saveMonth();
+          renderTodayHabits();
+          renderWeekStrip();
+          requestAnimationFrame(() => {
+            document.querySelectorAll(`.habit-card[data-habit="${habitIdx}"]`).forEach(c => c.classList.add('arriving'));
+          });
+        }, { once: true });
       }, { once: true });
     });
   });
