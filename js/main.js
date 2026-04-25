@@ -12,6 +12,20 @@ const state = {
   data: {}
 };
 
+let selectedDate = new Date();
+
+const DAY_NAMES_FR = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+const MONTHS_SHORT_FR = ['jan.','fév.','mar.','avr.','mai','juin','juil.','août','sep.','oct.','nov.','déc.'];
+
+function updatePageTitleForSelectedDate() {
+  const el = document.getElementById('pageTitle');
+  if (!el) return;
+  const today = new Date();
+  el.textContent = selectedDate.toDateString() === today.toDateString()
+    ? "Aujourd'hui"
+    : `${DAY_NAMES_FR[selectedDate.getDay()]} ${selectedDate.getDate()} ${MONTHS_SHORT_FR[selectedDate.getMonth()]}`;
+}
+
 const app = document.getElementById('app');
 const modalBackdrop = document.getElementById('modalBackdrop');
 const editList = document.getElementById('editList');
@@ -252,49 +266,58 @@ function renderWeekStrip() {
   const activeCount = state.habits.filter(h => h.trim()).length;
   const R = 14, CIRC = +(2 * Math.PI * R).toFixed(2);
 
-  let daysHtml = '';
-  for (let i = 0; i < 7; i++) {
+  const weekDates = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
+    return d;
+  });
+
+  let daysHtml = '';
+  weekDates.forEach((d, i) => {
     const dayNum = d.getDate();
-    const sameMonth = d.getFullYear() === state.year && d.getMonth() === state.month;
+    const inLoadedMonth = d.getFullYear() === state.year && d.getMonth() === state.month;
     const isToday = d.toDateString() === today.toDateString();
-    const isFuture = d > today;
+    const isSelected = d.toDateString() === selectedDate.toDateString();
 
     let doneCount = 0;
-    if (sameMonth && !isFuture && activeCount > 0) {
+    if (inLoadedMonth && activeCount > 0) {
       doneCount = Object.values(state.data[dayNum] || {}).filter(v => v === 1).length;
     }
     const pct = activeCount > 0 ? doneCount / activeCount : 0;
-    const offset = +(CIRC * (1 - pct)).toFixed(2);
     const full = pct === 1;
+    const offset = +(CIRC * (1 - pct)).toFixed(2);
 
     let ringColor, innerBg, textColor, content;
-    if (isToday) {
-      ringColor = full ? '#34c759' : '#5856d6';
-      innerBg = full ? '#34c759' : 'transparent';
-      textColor = full ? 'white' : '#1c1c1e';
+    if (isSelected) {
+      const fillColor = full ? '#34c759' : '#5856d6';
+      ringColor = fillColor;
+      innerBg = fillColor;
+      textColor = 'white';
       content = full ? '✓' : dayNum;
-    } else if (!isFuture) {
-      if (full) { ringColor = '#1c1c1e'; innerBg = '#1c1c1e'; textColor = 'white'; content = '✓'; }
-      else if (pct > 0) { ringColor = '#5856d6'; innerBg = 'transparent'; textColor = '#1c1c1e'; content = dayNum; }
-      else { ringColor = '#e5e5ea'; innerBg = 'transparent'; textColor = '#8e8e93'; content = dayNum; }
+    } else if (isToday) {
+      ringColor = full ? '#34c759' : '#5856d6';
+      innerBg = 'transparent';
+      textColor = '#1c1c1e';
+      content = dayNum;
     } else {
-      ringColor = '#e5e5ea'; innerBg = 'transparent'; textColor = '#c7c7cc'; content = dayNum;
+      const isPast = d < today;
+      if (full) { ringColor = '#1c1c1e'; innerBg = 'transparent'; textColor = '#1c1c1e'; content = '✓'; }
+      else if (pct > 0) { ringColor = '#5856d6'; innerBg = 'transparent'; textColor = '#1c1c1e'; content = dayNum; }
+      else { ringColor = '#e5e5ea'; innerBg = 'transparent'; textColor = isPast ? '#8e8e93' : '#c7c7cc'; content = dayNum; }
     }
 
-    const arcSvg = pct > 0
+    const arcSvg = pct > 0 && !isSelected
       ? `<circle cx="17" cy="17" r="${R}" fill="none" stroke="${ringColor}" stroke-width="2.5" stroke-dasharray="${CIRC}" stroke-dashoffset="${offset}" stroke-linecap="round" transform="rotate(-90 17 17)"/>`
       : '';
 
-    daysHtml += `<div class="s-day">
+    daysHtml += `<div class="s-day" data-week-idx="${i}" style="cursor:pointer">
       <span class="s-day-label">${DAY_LABELS[i]}</span>
       <div class="s-circle-wrap">
         <svg viewBox="0 0 34 34"><circle cx="17" cy="17" r="${R}" fill="none" stroke="#e5e5ea" stroke-width="2.5"/>${arcSvg}</svg>
-        <div class="s-circle-inner" style="background:${innerBg};color:${textColor};font-weight:${isToday ? 700 : 600}">${content}</div>
+        <div class="s-circle-inner" style="background:${innerBg};color:${textColor};font-weight:${(isSelected || isToday) ? 700 : 600}">${content}</div>
       </div>
     </div>`;
-  }
+  });
 
   const streak = calcStreak();
   const label = streak === 1 ? 'Jour' : 'Jours';
@@ -308,6 +331,16 @@ function renderWeekStrip() {
     <div class="streak-sep"></div>
     <div class="streak-week">${daysHtml}</div>
   </div>`;
+
+  widgetEl.querySelectorAll('.s-day').forEach((el, i) => {
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      selectedDate = weekDates[i];
+      updatePageTitleForSelectedDate();
+      renderWeekStrip();
+      renderTodayHabits();
+    });
+  });
 }
 
 // ── Today view ────────────────────────────────────────────────────────────────
@@ -359,9 +392,8 @@ function renderTodayHabits() {
   const doneSection = document.getElementById('doneSection');
   if (!pendingSection) return;
 
-  const now = new Date();
-  const todayDay = now.getDate();
-  const isCurrentMonth = now.getFullYear() === state.year && now.getMonth() === state.month;
+  const selDay = selectedDate.getDate();
+  const dataAvailable = selectedDate.getFullYear() === state.year && selectedDate.getMonth() === state.month;
 
   const activeHabits = state.habits.map((name, i) => ({ name, i })).filter(h => h.name.trim());
 
@@ -375,12 +407,12 @@ function renderTodayHabits() {
   let doneHtml = '';
 
   activeHabits.forEach(h => {
-    const val = isCurrentMonth && state.data[todayDay] ? (state.data[todayDay][h.i] || 0) : 0;
+    const val = dataAvailable && state.data[selDay] ? (state.data[selDay][h.i] || 0) : 0;
     const isDone = val === 1;
     const v = getHabitVisual(h.name, h.i);
     const c = PILLAR_COLORS[v.pillar];
     const pillLabel = v.pillar === 'body' ? 'Body' : v.pillar === 'mind' ? 'Mind' : 'Spirit';
-    const card = `<div class="habit-card${isDone ? ' done-card' : ''}" data-habit="${h.i}" data-day="${todayDay}">
+    const card = `<div class="habit-card${isDone ? ' done-card' : ''}" data-habit="${h.i}" data-day="${selDay}">
       <div class="habit-card-icon" style="background:${isDone ? '#e8f5e9' : c.bg}">${isDone ? '✓' : v.emoji}</div>
       <div class="habit-card-body">
         <div class="habit-card-name${isDone ? ' done-name' : ''}">${escapeAttr(h.name)}</div>
@@ -397,7 +429,7 @@ function renderTodayHabits() {
 
   document.querySelectorAll('.habit-card-btn').forEach(btn => {
     btn.addEventListener('pointerdown', e => {
-      if (!isCurrentMonth) return;
+      if (!dataAvailable) return;
       e.preventDefault();
       e.stopPropagation();
       btn.classList.add('animating');
@@ -407,12 +439,12 @@ function renderTodayHabits() {
         card.classList.add('leaving');
         card.addEventListener('animationend', () => {
           const habitIdx = parseInt(btn.dataset.habit, 10);
-          if (!state.data[todayDay]) state.data[todayDay] = {};
-          const cur = state.data[todayDay][habitIdx] || 0;
+          if (!state.data[selDay]) state.data[selDay] = {};
+          const cur = state.data[selDay][habitIdx] || 0;
           const next = cur === 1 ? 0 : 1;
-          if (next === 0) delete state.data[todayDay][habitIdx];
-          else state.data[todayDay][habitIdx] = next;
-          if (Object.keys(state.data[todayDay] || {}).length === 0) delete state.data[todayDay];
+          if (next === 0) delete state.data[selDay][habitIdx];
+          else state.data[selDay][habitIdx] = next;
+          if (Object.keys(state.data[selDay] || {}).length === 0) delete state.data[selDay];
           saveMonth();
           renderTodayHabits();
           renderWeekStrip();
@@ -445,7 +477,14 @@ document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => btn.addEventListe
   if (pageTitleEl) pageTitleEl.textContent = PAGE_TITLES[id] || '';
 
   if (id === 'fruits') { await loadFruits(); renderFruits(); }
-  else if (id === 'today') { renderTodayHabits(); renderWeekStrip(); }
+  else if (id === 'today') {
+    const t = new Date();
+    if (state.year !== t.getFullYear() || state.month !== t.getMonth()) {
+      state.year = t.getFullYear(); state.month = t.getMonth(); await loadMonth();
+    }
+    updatePageTitleForSelectedDate();
+    renderTodayHabits(); renderWeekStrip();
+  }
   else if (id === 'calendar') { await loadMonth(); renderCalendarGrid(); }
   else if (id === 'focus') { render(); }
 }));
