@@ -35,29 +35,39 @@
   .card-title { font-size: 17px; font-weight: 600; color: #1c1c1e; }
   .card-count { display: flex; align-items: center; gap: 5px; color: #8e8e93; font-size: 16px; }
 
-  /* Today habit items */
+  /* Streak card */
+  .streak-card { background: white; border-radius: 20px; margin: 12px 16px 0; padding: 14px 16px; box-shadow: 0 2px 16px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 14px; }
+  .streak-left { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; gap: 2px; }
+  .s-flame-wrap { position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
+  .s-flame-bg { font-size: 40px; line-height: 1; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .s-flame-count { position: relative; z-index: 1; font-size: 17px; font-weight: 900; color: white; margin-top: 6px; text-shadow: 0 1px 3px rgba(160,60,0,0.5); }
+  .s-streak-label { font-size: 10px; font-weight: 700; color: #ff6b35; text-transform: uppercase; letter-spacing: 0.04em; }
+  .streak-sep { width: 1px; height: 48px; background: #f2f2f7; flex-shrink: 0; }
+  .streak-week { display: flex; gap: 4px; flex: 1; justify-content: space-between; }
+  .s-day { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .s-day-label { font-size: 10px; font-weight: 600; color: #8e8e93; }
+  .s-circle { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #c7c7cc; }
+  .s-circle.past { color: #8e8e93; }
+  .s-circle.done { background: #1c1c1e; color: white; font-size: 14px; }
+  .s-circle.today { border: 2px solid #5856d6; color: #1c1c1e; font-weight: 700; }
+  .s-circle.today.done { background: #1c1c1e; color: white; border: none; font-size: 14px; }
+
+  /* Habit cards */
   @keyframes habitCheck { 0%{transform:scale(1)} 30%{transform:scale(1.45)} 60%{transform:scale(0.82)} 80%{transform:scale(1.1)} 100%{transform:scale(1)} }
-  .habit-today-item { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid #f2f2f7; user-select: none; -webkit-user-select: none; }
-  .habit-today-item:last-child { border-bottom: none; }
-  .habit-icon-btn { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; border: none; cursor: pointer; transition: transform 0.1s; }
-  .habit-icon-btn:active { transform: scale(0.88); }
-  .habit-icon-btn.animating { animation: habitCheck 0.38s ease; }
-  .habit-icon-btn.done-icon { font-size: 20px; font-weight: 700; color: #34c759; }
-  .habit-today-name { flex: 1; font-size: 16px; font-weight: 500; color: #1c1c1e; }
-  .habit-today-name.done-name { color: #8e8e93; text-decoration: line-through; }
+  .habit-card { background: white; border-radius: 18px; margin: 10px 16px 0; padding: 14px 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 14px; user-select: none; -webkit-user-select: none; }
+  .habit-card.done-card { opacity: 0.55; }
+  .habit-card-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .habit-card-body { flex: 1; min-width: 0; }
+  .habit-card-name { font-size: 16px; font-weight: 600; color: #1c1c1e; }
+  .habit-card-name.done-name { color: #8e8e93; text-decoration: line-through; }
+  .habit-card-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .habit-card-btn { width: 34px; height: 34px; border-radius: 50%; border: 2px solid #e5e5ea; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #c7c7cc; flex-shrink: 0; transition: all 0.15s; }
+  .habit-card-btn.done-btn { background: #34c759; border-color: #34c759; color: white; font-weight: 700; }
+  .habit-card-btn.animating { animation: habitCheck 0.38s ease; }
   .pillar-tag { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
   .pillar-body { background: #e8f0ff; color: #0a84ff; }
   .pillar-mind { background: #f3e8ff; color: #bf5af2; }
   .pillar-spirit { background: #fff3e0; color: #ff9f0a; }
-  .section-badge { font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
-  .badge-pending { background: #f2f2f7; color: #8e8e93; }
-  .badge-done { background: #e8f5e9; color: #34c759; }
-  .done-section-header { cursor: pointer; }
-  .collapse-arrow { font-size: 20px; color: #8e8e93; display: inline-block; transition: transform 0.25s; transform: rotate(90deg); line-height: 1; }
-  .collapse-arrow.open { transform: rotate(-90deg); }
-  .collapsible-body { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
-  .collapsible-body.open { max-height: 2000px; }
-  .all-done-msg { text-align: center; padding: 18px 0 4px; font-size: 15px; color: #34c759; font-weight: 600; }
 
   /* FAB */
   .fab { position: fixed; bottom: 96px; right: 20px; width: 58px; height: 58px; background: #5856d6; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; line-height: 1; box-shadow: 0 4px 20px rgba(88,86,214,0.45); border: none; cursor: pointer; z-index: 40; }
@@ -193,23 +203,6 @@
   .add-habit-btn { width: 100%; margin-top: 12px; font-size: 15px; font-weight: 600; padding: 13px; cursor: pointer; border: 2px dashed #c7c7cc; border-radius: 14px; background: transparent; color: #5856d6; }
   .add-habit-btn:active { background: rgba(88,86,214,0.06); }
 
-  /* Streak widget */
-  .streak-widget { display: flex; align-items: center; gap: 14px; padding: 14px 16px 4px; }
-  .streak-flame-wrap { position: relative; width: 68px; height: 68px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .streak-flame-bg { font-size: 64px; line-height: 1; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-  .streak-flame-count { position: relative; z-index: 1; font-size: 26px; font-weight: 900; color: white; margin-top: 10px; text-shadow: 0 1px 3px rgba(160,60,0,0.45); }
-  .streak-label { font-size: 14px; font-weight: 700; color: #ff6b35; }
-  .streak-zero .streak-label { color: #8e8e93; font-weight: 500; }
-
-  /* Week strip */
-  .week-strip { display: grid; grid-template-columns: repeat(7, 1fr); padding: 8px 16px 6px; gap: 2px; }
-  .week-day { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-  .week-day-label { font-size: 11px; font-weight: 600; color: #8e8e93; }
-  .week-day-num { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #c7c7cc; }
-  .week-day-num.past { color: #8e8e93; }
-  .week-day-num.done { background: #1c1c1e; color: white; font-size: 18px; }
-  .week-day-num.today { border: 2px solid #8e8e93; color: #1c1c1e; }
-  .week-day-num.today.done { background: #1c1c1e; color: white; border: none; font-size: 18px; }
 
   /* Monthly calendar grid */
   .cal-grid { padding: 4px 0 2px; }
@@ -242,10 +235,9 @@
 
   <!-- Today panel (default) -->
   <div class="tab-panel active" id="panel-today">
-    <div id="streakWidget" class="streak-widget"></div>
-    <div id="weekStrip" class="week-strip"></div>
-    <div id="pendingSection" class="section"></div>
-    <div id="doneSection" class="section"></div>
+    <div id="streakWidget"></div>
+    <div id="pendingSection"></div>
+    <div id="doneSection"></div>
   </div>
 
   <!-- Calendar panel -->
