@@ -46,11 +46,9 @@
   .streak-week { display: flex; gap: 4px; flex: 1; justify-content: space-between; }
   .s-day { display: flex; flex-direction: column; align-items: center; gap: 4px; }
   .s-day-label { font-size: 10px; font-weight: 600; color: #8e8e93; }
-  .s-circle { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #c7c7cc; }
-  .s-circle.past { color: #8e8e93; }
-  .s-circle.done { background: #1c1c1e; color: white; font-size: 14px; }
-  .s-circle.today { border: 2px solid #5856d6; color: #1c1c1e; font-weight: 700; }
-  .s-circle.today.done { background: #1c1c1e; color: white; border: none; font-size: 14px; }
+  .s-circle-wrap { position: relative; width: 34px; height: 34px; flex-shrink: 0; }
+  .s-circle-wrap svg { position: absolute; top: 0; left: 0; width: 34px; height: 34px; }
+  .s-circle-inner { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); }
 
   /* Habit cards */
   @keyframes habitCheck { 0%{transform:scale(1)} 30%{transform:scale(1.45)} 60%{transform:scale(0.82)} 80%{transform:scale(1.1)} 100%{transform:scale(1)} }
