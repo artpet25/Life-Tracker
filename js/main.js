@@ -237,6 +237,27 @@ function renderCalendarGrid() {
   }
   html += '</div>';
   gridEl.innerHTML = html;
+
+  gridEl.querySelectorAll('.cal-cell:not(.blank)').forEach(cell => {
+    cell.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      const day = parseInt(cell.textContent, 10);
+      if (!isNaN(day)) switchToTodayForDate(new Date(state.year, state.month, day));
+    });
+  });
+}
+
+function switchToTodayForDate(date) {
+  selectedDate = date;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const todayBtn = document.querySelector('.nav-btn[data-tab="today"]');
+  if (todayBtn) todayBtn.classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('panel-today');
+  if (panel) panel.classList.add('active');
+  updatePageTitleForSelectedDate();
+  renderTodayHabits();
+  renderWeekStrip();
 }
 
 // ── Streak & week strip ───────────────────────────────────────────────────────
@@ -432,12 +453,11 @@ function renderTodayHabits() {
       if (!dataAvailable) return;
       e.preventDefault();
       e.stopPropagation();
+      const card = btn.closest('.habit-card');
       btn.classList.add('animating');
-      btn.addEventListener('animationend', () => {
-        const card = btn.closest('.habit-card');
-        if (!card) return;
-        card.classList.add('leaving');
-        card.addEventListener('animationend', () => {
+      setTimeout(() => {
+        if (card) card.classList.add('leaving');
+        setTimeout(() => {
           const habitIdx = parseInt(btn.dataset.habit, 10);
           if (!state.data[selDay]) state.data[selDay] = {};
           const cur = state.data[selDay][habitIdx] || 0;
@@ -451,8 +471,8 @@ function renderTodayHabits() {
           requestAnimationFrame(() => {
             document.querySelectorAll(`.habit-card[data-habit="${habitIdx}"]`).forEach(c => c.classList.add('arriving'));
           });
-        }, { once: true });
-      }, { once: true });
+        }, 200);
+      }, 280);
     });
   });
 }
@@ -479,6 +499,7 @@ document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => btn.addEventListe
   if (id === 'fruits') { await loadFruits(); renderFruits(); }
   else if (id === 'today') {
     const t = new Date();
+    selectedDate = t;
     if (state.year !== t.getFullYear() || state.month !== t.getMonth()) {
       state.year = t.getFullYear(); state.month = t.getMonth(); await loadMonth();
     }
