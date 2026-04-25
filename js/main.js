@@ -358,7 +358,7 @@ function renderWeekStrip() {
       <span class="s-streak-label" style="color:${labelColor}">${label}</span>
     </div>
     <div class="streak-sep"></div>
-    <div class="streak-week-col"><div class="streak-week" id="streakWeekDays">${daysHtml}</div>${weekRangeLabel}</div>
+    <div class="streak-week-col"><div class="streak-week" id="streakWeekDays"><div class="streak-week-track">${daysHtml}</div></div>${weekRangeLabel}</div>
   </div>`;
 
   const weekEl = widgetEl.querySelector('#streakWeekDays');
@@ -378,29 +378,56 @@ function renderWeekStrip() {
     });
   });
 
-  // Horizontal swipe to navigate weeks
+  // Swipe to navigate weeks — live drag + slide-in
+  const getTrack = () => weekEl.querySelector('.streak-week-track');
+
   weekEl.addEventListener('touchstart', e => {
     weekSwipeStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     weekSwiped = false;
+    const t = getTrack(); if (t) t.style.transition = 'none';
   }, { passive: true });
+
   weekEl.addEventListener('touchmove', e => {
     if (!weekSwipeStart) return;
-    const dx = Math.abs(e.touches[0].clientX - weekSwipeStart.x);
+    const dx = e.touches[0].clientX - weekSwipeStart.x;
     const dy = Math.abs(e.touches[0].clientY - weekSwipeStart.y);
-    if (dx > dy && dx > 12) { weekSwiped = true; e.preventDefault(); }
+    if (Math.abs(dx) > dy && Math.abs(dx) > 8) {
+      weekSwiped = true;
+      e.preventDefault();
+      const t = getTrack(); if (t) t.style.transform = `translateX(${dx * 0.45}px)`;
+    }
   }, { passive: false });
+
   weekEl.addEventListener('touchend', e => {
     if (!weekSwipeStart) return;
     const dx = e.changedTouches[0].clientX - weekSwipeStart.x;
     weekSwipeStart = null;
+
     if (weekSwiped && Math.abs(dx) > 40) {
       weekOffset += dx > 0 ? -1 : 1;
       const newMonday = getWeekMonday(weekOffset);
       const mid = new Date(newMonday); mid.setDate(newMonday.getDate() + 3);
-      if (mid.getFullYear() !== state.year || mid.getMonth() !== state.month) {
-        state.year = mid.getFullYear(); state.month = mid.getMonth();
-        loadMonth().then(() => renderWeekStrip());
-      } else { renderWeekStrip(); }
+      const needLoad = mid.getFullYear() !== state.year || mid.getMonth() !== state.month;
+      const slideIn = () => {
+        renderWeekStrip();
+        const nt = document.querySelector('#streakWeekDays .streak-week-track');
+        if (!nt) return;
+        const from = dx > 0 ? '55%' : '-55%';
+        nt.style.cssText = `transform:translateX(${from});transition:none`;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          nt.style.cssText = `transform:translateX(0);transition:transform 0.28s cubic-bezier(0.25,0.46,0.45,0.94)`;
+          nt.addEventListener('transitionend', () => { nt.style.cssText = ''; }, { once: true });
+        }));
+      };
+      if (needLoad) { state.year = mid.getFullYear(); state.month = mid.getMonth(); loadMonth().then(slideIn); }
+      else slideIn();
+    } else {
+      const t = getTrack();
+      if (t) {
+        t.style.transition = 'transform 0.22s ease';
+        t.style.transform = 'translateX(0)';
+        t.addEventListener('transitionend', () => { t.style.cssText = ''; }, { once: true });
+      }
     }
   });
 }
@@ -475,7 +502,7 @@ function renderTodayHabits() {
     const c = PILLAR_COLORS[v.pillar];
     const pillLabel = v.pillar === 'body' ? 'Body' : v.pillar === 'mind' ? 'Mind' : 'Spirit';
     const card = `<div class="habit-card${isDone ? ' done-card' : ''}" data-habit="${h.i}" data-day="${selDay}">
-      <div class="habit-card-icon" style="background:${isDone ? '#e8f5e9' : c.bg}">${isDone ? '✓' : v.emoji}</div>
+      <div class="habit-card-icon" style="background:${c.bg}">${v.emoji}</div>
       <div class="habit-card-body">
         <div class="habit-card-name${isDone ? ' done-name' : ''}">${escapeAttr(h.name)}</div>
         <div class="habit-card-meta"><span class="pillar-tag pillar-${v.pillar}">${pillLabel}</span></div>
