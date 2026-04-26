@@ -15,6 +15,7 @@ const state = {
 let selectedDate = new Date();
 let weekOffset = 0;
 let weekSwipeStart = null, weekSwiped = false;
+let reorderBuffer = [];
 
 function getWeekMonday(offset) {
   const today = new Date();
@@ -197,6 +198,12 @@ document.getElementById('saveEdit').addEventListener('click', saveSettings);
 document.getElementById('addHabit').addEventListener('click', () => { if (state.editBuffer.length < MAX_HABITS) { state.editBuffer.push(''); renderEditList(); } });
 modalBackdrop.addEventListener('click', e => { if (e.target === modalBackdrop) closeSettings(); });
 
+document.querySelector('.topbar-menu').addEventListener('click', openReorder);
+document.getElementById('reorderClose').addEventListener('click', closeReorder);
+document.getElementById('reorderCancel').addEventListener('click', closeReorder);
+document.getElementById('reorderSave').addEventListener('click', saveReorder);
+document.getElementById('reorderBackdrop').addEventListener('click', e => { if (e.target.id === 'reorderBackdrop') closeReorder(); });
+
 document.getElementById('prevMonth').addEventListener('click', async () => { state.month--; if (state.month < 0) { state.month=11; state.year--; } await loadMonth(); renderCalendarGrid(); });
 document.getElementById('nextMonth').addEventListener('click', async () => { state.month++; if (state.month > 11) { state.month=0; state.year++; } await loadMonth(); renderCalendarGrid(); });
 document.getElementById('prevMonthFocus').addEventListener('click', async () => { state.month--; if (state.month < 0) { state.month=11; state.year--; } await loadMonth(); render(); });
@@ -214,48 +221,146 @@ function renderCalendarGrid() {
   const days = daysInMonth(state.year, state.month);
   const today = new Date();
   const isCurrentMonth = today.getFullYear() === state.year && today.getMonth() === state.month;
-  const todayDay = isCurrentMonth ? today.getDate() : -1;
   const isFutureMonth = (state.year > today.getFullYear()) || (state.year === today.getFullYear() && state.month > today.getMonth());
+  const todayDay = isCurrentMonth ? today.getDate() : -1;
   const activeCount = state.habits.filter(h => h.trim()).length;
 
   const firstDow = new Date(state.year, state.month, 1).getDay();
-  const offset = firstDow === 0 ? 6 : firstDow - 1;
-  const DAY_LABELS = ['L','M','M','J','V','S','D'];
+  const startOffset = firstDow === 0 ? 6 : firstDow - 1;
+  const prevMonthDays = daysInMonth(
+    state.month === 0 ? state.year - 1 : state.year,
+    state.month === 0 ? 11 : state.month - 1
+  );
 
-  let html = '<div class="cal-row-headers">';
-  DAY_LABELS.forEach(d => { html += `<div class="cal-row-header">${d}</div>`; });
-  html += '</div><div class="cal-days-grid">';
-  for (let i = 0; i < offset; i++) html += '<div class="cal-cell blank"></div>';
+  const R = 14, CIRC = +(2 * Math.PI * R).toFixed(2);
+  const DAY_LABELS = ['L.','M.','M.','J.','V.','S.','D.'];
+
+  function daySvg(num, opts = {}) {
+    const { bgFill = 'none', ringColor = '#f2f2f7', ringW = 2, arcColor = '', arcOffset = CIRC, textColor = '#1c1c1e', bold = false } = opts;
+    const textW = bold ? 'bold' : '600';
+    const arc = arcColor
+      ? `<circle cx="17" cy="17" r="${R}" fill="none" stroke="${arcColor}" stroke-width="2.5" stroke-dasharray="${CIRC}" stroke-dashoffset="${arcOffset}" stroke-linecap="round" transform="rotate(-90 17 17)"/>`
+      : '';
+    return `<svg width="34" height="34" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="17" cy="17" r="${R}" fill="${bgFill}" stroke="${ringColor}" stroke-width="${ringW}"/>
+      ${arc}
+      <text x="17" y="21.5" text-anchor="middle" font-size="11.5" font-weight="${textW}" fill="${textColor}" font-family="-apple-system,sans-serif">${num}</text>
+    </svg>`;
+  }
+
+  let html = '<div class="cal-ring-outer">';
+  html += '<div class="cal-row-headers">';
+  DAY_LABELS.forEach(l => { html += `<div class="cal-row-header">${l}</div>`; });
+  html += '</div><div class="cal-ring-days">';
+
+  for (let i = 0; i < startOffset; i++) {
+    const dn = prevMonthDays - startOffset + 1 + i;
+    html += `<div class="cal-ring-cell">${daySvg(dn, { textColor: '#d1d1d6' })}</div>`;
+  }
 
   for (let d = 1; d <= days; d++) {
-    const dow = new Date(state.year, state.month, d).getDay();
-    const isWeekend = dow === 0 || dow === 6;
     const isToday = d === todayDay;
     const isFuture = isFutureMonth || (isCurrentMonth && d > todayDay);
-    let cls = 'cal-cell' + (isWeekend ? ' weekend' : '') + (isToday ? ' today' : '');
-    if (isFuture) {
-      cls += ' future';
-    } else {
-      const dayData = state.data[d] || {};
-      const doneCount = Object.values(dayData).filter(v => v === 1).length;
-      const failCount = Object.values(dayData).filter(v => v === 2).length;
-      if (activeCount > 0 && doneCount >= activeCount) cls += ' done';
-      else if (doneCount > 0) cls += ' partial';
-      else if (failCount > 0) cls += ' fail';
-      else cls += ' empty';
+    const dow = new Date(state.year, state.month, d).getDay();
+    const isWeekend = dow === 0 || dow === 6;
+    const bgRing = isWeekend ? '#dddaf5' : '#f2f2f7';
+
+    let doneCount = 0;
+    if (!isFuture && activeCount > 0) {
+      doneCount = Object.values(state.data[d] || {}).filter(v => v === 1).length;
     }
-    html += `<div class="${cls}">${d}</div>`;
+    const pct = activeCount > 0 ? doneCount / activeCount : 0;
+    const full = doneCount > 0 && pct >= 1;
+    const dashOffset = +(CIRC * (1 - pct)).toFixed(2);
+
+    let svgHtml;
+    if (isToday) {
+      const outerRing = full ? `<circle cx="17" cy="17" r="${R}" fill="none" stroke="#34c759" stroke-width="2.5"/>` : '';
+      svgHtml = `<svg width="34" height="34" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="17" cy="17" r="${R}" fill="#5856d6"/>
+        ${outerRing}
+        <text x="17" y="21.5" text-anchor="middle" font-size="11.5" font-weight="bold" fill="white" font-family="-apple-system,sans-serif">${d}</text>
+      </svg>`;
+    } else if (isFuture) {
+      svgHtml = daySvg(d, { textColor: '#c7c7cc', ringColor: bgRing });
+    } else {
+      const arcColor = pct > 0 ? (full ? '#34c759' : '#5856d6') : '';
+      svgHtml = daySvg(d, { arcColor, arcOffset: dashOffset, ringColor: bgRing });
+    }
+
+    html += `<div class="cal-ring-cell" data-day="${d}">${svgHtml}</div>`;
   }
-  html += '</div>';
+
+  const totalCells = startOffset + days;
+  const nextFill = Math.ceil(totalCells / 7) * 7 - totalCells;
+  for (let i = 1; i <= nextFill; i++) {
+    html += `<div class="cal-ring-cell">${daySvg(i, { textColor: '#d1d1d6' })}</div>`;
+  }
+
+  html += '</div></div>';
   gridEl.innerHTML = html;
 
-  gridEl.querySelectorAll('.cal-cell:not(.blank)').forEach(cell => {
+  gridEl.querySelectorAll('.cal-ring-cell[data-day]').forEach(cell => {
     cell.addEventListener('pointerdown', e => {
       e.preventDefault();
-      const day = parseInt(cell.textContent, 10);
-      if (!isNaN(day)) switchToTodayForDate(new Date(state.year, state.month, day));
+      switchToTodayForDate(new Date(state.year, state.month, parseInt(cell.dataset.day, 10)));
     });
   });
+
+  renderCalStats();
+}
+
+function renderCalStats() {
+  const statsEl = document.getElementById('calStats');
+  if (!statsEl) return;
+  const activeCount = state.habits.filter(h => h.trim()).length;
+  if (!activeCount) { statsEl.innerHTML = ''; return; }
+
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === state.year && today.getMonth() === state.month;
+  const isPastMonth = (state.year < today.getFullYear()) || (state.year === today.getFullYear() && state.month < today.getMonth());
+  const days = daysInMonth(state.year, state.month);
+  const maxDay = isCurrentMonth ? today.getDate() : (isPastMonth ? days : 0);
+
+  let doneDays = 0, totalPossible = 0, doneHabits = 0;
+  let run = 0, bestStreak = 0;
+  for (let d = 1; d <= maxDay; d++) {
+    const vals = Object.values(state.data[d] || {});
+    const dn = vals.filter(v => v === 1).length;
+    doneHabits += dn; totalPossible += activeCount;
+    if (dn >= activeCount) doneDays++;
+    if (vals.some(v => v === 1)) { run++; bestStreak = Math.max(bestStreak, run); }
+    else run = 0;
+  }
+
+  const currentStreak = isCurrentMonth ? calcStreak() : 0;
+  const rate = totalPossible > 0 ? Math.round((doneHabits / totalPossible) * 100) : 0;
+  const periodLabel = isCurrentMonth ? 'Ce mois' : `${MONTHS_SHORT_FR[state.month]} ${state.year}`;
+
+  statsEl.innerHTML = `<div class="stats-section">
+    <div class="stats-header">
+      <span class="stats-title">Records</span>
+      <span class="stats-period-label">${periodLabel}</span>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-card-top"><span class="stat-card-num">${currentStreak}</span><span class="stat-card-icon">🔥</span></div>
+        <div class="stat-card-label">Série en cours</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-top"><span class="stat-card-num">${bestStreak}</span><span class="stat-card-icon">🏅</span></div>
+        <div class="stat-card-label">Meilleure série</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-top"><span class="stat-card-num">${doneDays}</span><span class="stat-card-icon">📋</span></div>
+        <div class="stat-card-label">Terminé</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-top"><span class="stat-card-num">${rate} %</span><span class="stat-card-icon">🏁</span></div>
+        <div class="stat-card-label">Taux de réussite</div>
+      </div>
+    </div>
+  </div>`;
 }
 
 function switchToTodayForDate(date) {
@@ -554,6 +659,106 @@ function renderTodayHabits() {
       }, 280);
     });
   });
+}
+
+// ── Reorder ───────────────────────────────────────────────────────────────────
+
+function openReorder() {
+  reorderBuffer = state.habits
+    .map((name, i) => ({ name, origIdx: i }))
+    .filter(h => h.name.trim());
+  if (!reorderBuffer.length) return;
+  renderReorderList();
+  document.getElementById('reorderBackdrop').classList.add('open');
+}
+
+function closeReorder() {
+  document.getElementById('reorderBackdrop').classList.remove('open');
+}
+
+function renderReorderList() {
+  const container = document.getElementById('reorderList');
+  container.innerHTML = reorderBuffer.map((h, i) => {
+    const v = getHabitVisual(h.name, h.origIdx);
+    const c = PILLAR_COLORS[v.pillar];
+    return `<div class="reorder-item" data-ri="${i}">
+      <span class="reorder-handle">⠿</span>
+      <div class="reorder-emoji" style="background:${c.bg}">${v.emoji}</div>
+      <span class="reorder-name">${escapeAttr(h.name)}</span>
+    </div>`;
+  }).join('');
+  setupReorderDrag(container);
+}
+
+function setupReorderDrag(container) {
+  container.querySelectorAll('.reorder-handle').forEach((handle, idx) => {
+    handle.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      handle.setPointerCapture(e.pointerId);
+      const item = handle.closest('.reorder-item');
+      const itemH = item.offsetHeight + 8;
+      let dy = 0;
+      const startY = e.clientY;
+      item.classList.add('is-dragging');
+
+      function onMove(ev) {
+        dy = ev.clientY - startY;
+        item.style.transform = `translateY(${dy}px)`;
+        const toIdx = Math.max(0, Math.min(reorderBuffer.length - 1, idx + Math.round(dy / itemH)));
+        [...container.querySelectorAll('.reorder-item')].forEach((el, domIdx) => {
+          if (el === item) return;
+          let shift = 0;
+          if (toIdx < idx && domIdx >= toIdx && domIdx < idx) shift = itemH;
+          if (toIdx > idx && domIdx > idx && domIdx <= toIdx) shift = -itemH;
+          el.style.transform = `translateY(${shift}px)`;
+          el.style.transition = 'transform 0.16s ease';
+        });
+      }
+
+      function onUp() {
+        handle.removeEventListener('pointermove', onMove);
+        const toIdx = Math.max(0, Math.min(reorderBuffer.length - 1, idx + Math.round(dy / itemH)));
+        item.classList.remove('is-dragging');
+        item.style.cssText = '';
+        [...container.querySelectorAll('.reorder-item')].forEach(el => { el.style.cssText = ''; });
+        if (toIdx !== idx) {
+          const [moved] = reorderBuffer.splice(idx, 1);
+          reorderBuffer.splice(toIdx, 0, moved);
+          renderReorderList();
+        }
+      }
+
+      handle.addEventListener('pointermove', onMove);
+      handle.addEventListener('pointerup', onUp, { once: true });
+    });
+  });
+}
+
+async function saveReorder() {
+  const activeCount = reorderBuffer.length;
+  const empties = state.habits.filter(h => !h.trim());
+  const newHabits = [...reorderBuffer.map(h => h.name), ...empties];
+
+  const oldToNew = {};
+  reorderBuffer.forEach((h, newIdx) => { oldToNew[h.origIdx] = newIdx; });
+  let ei = activeCount;
+  state.habits.forEach((name, oldIdx) => { if (!name.trim()) oldToNew[oldIdx] = ei++; });
+
+  for (const day in state.data) {
+    const old = { ...state.data[day] };
+    state.data[day] = {};
+    for (const k in old) {
+      const ni = oldToNew[parseInt(k, 10)];
+      if (ni !== undefined) state.data[day][ni] = old[k];
+    }
+    if (!Object.keys(state.data[day]).length) delete state.data[day];
+  }
+
+  state.habits = newHabits;
+  await saveHabits();
+  await saveMonth();
+  render(); renderCalendarGrid(); renderTodayHabits(); renderWeekStrip();
+  closeReorder();
 }
 
 // ── Tab navigation ─────────────────────────────────────────────────────────────
