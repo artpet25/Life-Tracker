@@ -15,6 +15,7 @@ const state = {
 let selectedDate = new Date();
 let weekOffset = 0;
 let weekSwipeStart = null, weekSwiped = false;
+let reorderBuffer = [];
 
 function getWeekMonday(offset) {
   const today = new Date();
@@ -196,6 +197,12 @@ document.getElementById('cancelEdit').addEventListener('click', closeSettings);
 document.getElementById('saveEdit').addEventListener('click', saveSettings);
 document.getElementById('addHabit').addEventListener('click', () => { if (state.editBuffer.length < MAX_HABITS) { state.editBuffer.push(''); renderEditList(); } });
 modalBackdrop.addEventListener('click', e => { if (e.target === modalBackdrop) closeSettings(); });
+
+document.querySelector('.topbar-menu').addEventListener('click', openReorder);
+document.getElementById('reorderClose').addEventListener('click', closeReorder);
+document.getElementById('reorderCancel').addEventListener('click', closeReorder);
+document.getElementById('reorderSave').addEventListener('click', saveReorder);
+document.getElementById('reorderBackdrop').addEventListener('click', e => { if (e.target.id === 'reorderBackdrop') closeReorder(); });
 
 document.getElementById('prevMonth').addEventListener('click', async () => { state.month--; if (state.month < 0) { state.month=11; state.year--; } await loadMonth(); renderCalendarGrid(); });
 document.getElementById('nextMonth').addEventListener('click', async () => { state.month++; if (state.month > 11) { state.month=0; state.year++; } await loadMonth(); renderCalendarGrid(); });
@@ -554,6 +561,106 @@ function renderTodayHabits() {
       }, 280);
     });
   });
+}
+
+// ── Reorder ───────────────────────────────────────────────────────────────────
+
+function openReorder() {
+  reorderBuffer = state.habits
+    .map((name, i) => ({ name, origIdx: i }))
+    .filter(h => h.name.trim());
+  if (!reorderBuffer.length) return;
+  renderReorderList();
+  document.getElementById('reorderBackdrop').classList.add('open');
+}
+
+function closeReorder() {
+  document.getElementById('reorderBackdrop').classList.remove('open');
+}
+
+function renderReorderList() {
+  const container = document.getElementById('reorderList');
+  container.innerHTML = reorderBuffer.map((h, i) => {
+    const v = getHabitVisual(h.name, h.origIdx);
+    const c = PILLAR_COLORS[v.pillar];
+    return `<div class="reorder-item" data-ri="${i}">
+      <span class="reorder-handle">⠿</span>
+      <div class="reorder-emoji" style="background:${c.bg}">${v.emoji}</div>
+      <span class="reorder-name">${escapeAttr(h.name)}</span>
+    </div>`;
+  }).join('');
+  setupReorderDrag(container);
+}
+
+function setupReorderDrag(container) {
+  container.querySelectorAll('.reorder-handle').forEach((handle, idx) => {
+    handle.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      handle.setPointerCapture(e.pointerId);
+      const item = handle.closest('.reorder-item');
+      const itemH = item.offsetHeight + 8;
+      let dy = 0;
+      const startY = e.clientY;
+      item.classList.add('is-dragging');
+
+      function onMove(ev) {
+        dy = ev.clientY - startY;
+        item.style.transform = `translateY(${dy}px)`;
+        const toIdx = Math.max(0, Math.min(reorderBuffer.length - 1, idx + Math.round(dy / itemH)));
+        [...container.querySelectorAll('.reorder-item')].forEach((el, domIdx) => {
+          if (el === item) return;
+          let shift = 0;
+          if (toIdx < idx && domIdx >= toIdx && domIdx < idx) shift = itemH;
+          if (toIdx > idx && domIdx > idx && domIdx <= toIdx) shift = -itemH;
+          el.style.transform = `translateY(${shift}px)`;
+          el.style.transition = 'transform 0.16s ease';
+        });
+      }
+
+      function onUp() {
+        handle.removeEventListener('pointermove', onMove);
+        const toIdx = Math.max(0, Math.min(reorderBuffer.length - 1, idx + Math.round(dy / itemH)));
+        item.classList.remove('is-dragging');
+        item.style.cssText = '';
+        [...container.querySelectorAll('.reorder-item')].forEach(el => { el.style.cssText = ''; });
+        if (toIdx !== idx) {
+          const [moved] = reorderBuffer.splice(idx, 1);
+          reorderBuffer.splice(toIdx, 0, moved);
+          renderReorderList();
+        }
+      }
+
+      handle.addEventListener('pointermove', onMove);
+      handle.addEventListener('pointerup', onUp, { once: true });
+    });
+  });
+}
+
+async function saveReorder() {
+  const activeCount = reorderBuffer.length;
+  const empties = state.habits.filter(h => !h.trim());
+  const newHabits = [...reorderBuffer.map(h => h.name), ...empties];
+
+  const oldToNew = {};
+  reorderBuffer.forEach((h, newIdx) => { oldToNew[h.origIdx] = newIdx; });
+  let ei = activeCount;
+  state.habits.forEach((name, oldIdx) => { if (!name.trim()) oldToNew[oldIdx] = ei++; });
+
+  for (const day in state.data) {
+    const old = { ...state.data[day] };
+    state.data[day] = {};
+    for (const k in old) {
+      const ni = oldToNew[parseInt(k, 10)];
+      if (ni !== undefined) state.data[day][ni] = old[k];
+    }
+    if (!Object.keys(state.data[day]).length) delete state.data[day];
+  }
+
+  state.habits = newHabits;
+  await saveHabits();
+  await saveMonth();
+  render(); renderCalendarGrid(); renderTodayHabits(); renderWeekStrip();
+  closeReorder();
 }
 
 // ── Tab navigation ─────────────────────────────────────────────────────────────
