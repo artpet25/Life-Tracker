@@ -64,6 +64,9 @@
   .habit-card-btn { width: 44px; height: 44px; border-radius: 50%; border: 2px solid #e5e5ea; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #c7c7cc; flex-shrink: 0; }
   .habit-card-btn.done-btn { background: #34c759; border-color: #34c759; color: white; font-weight: 700; }
   .habit-card-btn.animating { animation: habitCheck 0.28s ease; }
+  .habit-card-name.missed-name { color: #ff3b30; }
+  .habit-card-btn.missed-btn { border-color: #ff3b30; color: #ff3b30; background: #fff5f5; }
+  .s-streak-since { font-size: 8px; font-weight: 600; color: #8e8e93; text-align: center; margin-top: 2px; letter-spacing: 0.01em; }
   .cal-cell:not(.blank):not(.future) { cursor: pointer; }
   .cal-cell.future { cursor: pointer; }
   .pillar-tag { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
@@ -76,7 +79,7 @@
   .fab:active { opacity: 0.85; transform: scale(0.95); }
 
   /* Bottom nav */
-  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-radius: 28px 28px 0 0; padding: 16px 10px 8px; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); display: flex; justify-content: space-around; align-items: center; box-shadow: 0 -4px 24px rgba(0,0,0,0.08); z-index: 50; }
+  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-radius: 28px 28px 0 0; padding: 22px 10px 6px; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 6px); display: flex; justify-content: space-around; align-items: center; box-shadow: 0 -4px 24px rgba(0,0,0,0.08); z-index: 50; }
   .nav-btn { display: flex; align-items: center; justify-content: center; width: 52px; height: 52px; border: none; background: none; cursor: pointer; border-radius: 16px; transition: background 0.2s; }
   .nav-btn.active { background: #5856d6; }
   .nav-btn svg { width: 24px; height: 24px; fill: none; stroke: #8e8e93; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -248,6 +251,10 @@
 </style>
 </head>
 <body>
+<div id="splash" style="position:fixed;inset:0;background:white;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity 0.45s ease;">
+  <span style="font-size:46px;font-weight:900;letter-spacing:0.4em;padding-left:0.4em;color:#1c1c1e;font-family:-apple-system,sans-serif">LIFE</span>
+  <div style="width:32px;height:2px;background:#5856d6;border-radius:2px;margin-top:14px"></div>
+</div>
 <div class="wrap">
 
   <div class="topbar">

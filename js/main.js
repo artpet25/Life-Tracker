@@ -457,10 +457,19 @@ function renderWeekStrip() {
   const weekRangeLabel = weekOffset !== 0
     ? `<div class="streak-week-range">${monday.getDate()} ${MONTHS_SHORT_FR[monday.getMonth()]} – ${sunday.getDate()} ${MONTHS_SHORT_FR[sunday.getMonth()]}</div>` : '';
 
+  let streakSinceHtml = '';
+  if (streak > 0 && state.year === today.getFullYear() && state.month === today.getMonth()) {
+    const todayDone = Object.values(state.data[today.getDate()] || {}).some(v => v === 1);
+    const startD = new Date(today);
+    startD.setDate(today.getDate() - (todayDone ? streak - 1 : streak));
+    streakSinceHtml = `<span class="s-streak-since">depuis le ${startD.getDate()} ${MONTHS_SHORT_FR[startD.getMonth()]}</span>`;
+  }
+
   widgetEl.innerHTML = `<div class="streak-card">
     <div class="streak-left">
       <div class="s-flame-wrap"><span class="s-flame-bg">🔥</span><span class="s-flame-count" style="color:${flameColor}">${streak || 0}</span></div>
       <span class="s-streak-label" style="color:${labelColor}">${label}</span>
+      ${streakSinceHtml}
     </div>
     <div class="streak-sep"></div>
     <div class="streak-week-col"><div class="streak-week" id="streakWeekDays"><div class="streak-week-track">${daysHtml}</div></div>${weekRangeLabel}</div>
@@ -600,19 +609,25 @@ function renderTodayHabits() {
   let pendingHtml = '';
   let doneHtml = '';
 
+  const todayNorm = new Date(); todayNorm.setHours(0,0,0,0);
+  const selNorm = new Date(selectedDate); selNorm.setHours(0,0,0,0);
+  const isPastDay = dataAvailable && selNorm < todayNorm;
+
   activeHabits.forEach(h => {
     const val = dataAvailable && state.data[selDay] ? (state.data[selDay][h.i] || 0) : 0;
     const isDone = val === 1;
+    const isMissed = isPastDay && !isDone;
     const v = getHabitVisual(h.name, h.i);
     const c = PILLAR_COLORS[v.pillar];
     const pillLabel = v.pillar === 'body' ? 'Body' : v.pillar === 'mind' ? 'Mind' : 'Spirit';
+    const iconBg = isMissed ? '#fff0f0' : c.bg;
     const card = `<div class="habit-card${isDone ? ' done-card' : ''}" data-habit="${h.i}" data-day="${selDay}">
-      <div class="habit-card-icon" style="background:${c.bg}">${v.emoji}</div>
+      <div class="habit-card-icon" style="background:${iconBg}">${v.emoji}</div>
       <div class="habit-card-body">
-        <div class="habit-card-name${isDone ? ' done-name' : ''}">${escapeAttr(h.name)}</div>
+        <div class="habit-card-name${isDone ? ' done-name' : isMissed ? ' missed-name' : ''}">${escapeAttr(h.name)}</div>
         <div class="habit-card-meta"><span class="pillar-tag pillar-${v.pillar}">${pillLabel}</span></div>
       </div>
-      <button class="habit-card-btn${isDone ? ' done-btn' : ''}" data-habit="${h.i}">${isDone ? '✓' : ''}</button>
+      <button class="habit-card-btn${isDone ? ' done-btn' : isMissed ? ' missed-btn' : ''}" data-habit="${h.i}">${isDone ? '✓' : isMissed ? '✗' : ''}</button>
     </div>`;
     if (isDone) doneHtml += card;
     else pendingHtml += card;
@@ -938,10 +953,18 @@ document.getElementById('nextWeek').addEventListener('click',async()=>{
 // ── Init ───────────────────────────────────────────────────────────────────────
 
 (async function init() {
+  const splashStart = Date.now();
   await loadHabits();
   await loadMonth();
   render();
   renderCalendarGrid();
   renderTodayHabits();
   renderWeekStrip();
+  const wait = Math.max(0, 1100 - (Date.now() - splashStart));
+  setTimeout(() => {
+    const splash = document.getElementById('splash');
+    if (!splash) return;
+    splash.style.opacity = '0';
+    setTimeout(() => splash.remove(), 460);
+  }, wait);
 })();
