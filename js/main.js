@@ -235,6 +235,19 @@ function renderCalendarGrid() {
   const R = 14, CIRC = +(2 * Math.PI * R).toFixed(2);
   const DAY_LABELS = ['L.','M.','M.','J.','V.','S.','D.'];
 
+  function daySvg(num, opts = {}) {
+    const { bgFill = 'none', ringColor = '#f2f2f7', ringW = 2, arcColor = '', arcOffset = CIRC, textColor = '#1c1c1e', bold = false } = opts;
+    const textW = bold ? 'bold' : '600';
+    const arc = arcColor
+      ? `<circle cx="17" cy="17" r="${R}" fill="none" stroke="${arcColor}" stroke-width="2.5" stroke-dasharray="${CIRC}" stroke-dashoffset="${arcOffset}" stroke-linecap="round" transform="rotate(-90 17 17)"/>`
+      : '';
+    return `<svg width="34" height="34" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="17" cy="17" r="${R}" fill="${bgFill}" stroke="${ringColor}" stroke-width="${ringW}"/>
+      ${arc}
+      <text x="17" y="21.5" text-anchor="middle" font-size="11.5" font-weight="${textW}" fill="${textColor}" font-family="-apple-system,sans-serif">${num}</text>
+    </svg>`;
+  }
+
   let html = '<div class="cal-ring-outer">';
   html += '<div class="cal-row-headers">';
   DAY_LABELS.forEach(l => { html += `<div class="cal-row-header">${l}</div>`; });
@@ -242,10 +255,7 @@ function renderCalendarGrid() {
 
   for (let i = 0; i < startOffset; i++) {
     const dn = prevMonthDays - startOffset + 1 + i;
-    html += `<div class="cal-ring-cell"><div class="cal-ring-wrap">
-      <svg viewBox="0 0 34 34"><circle cx="17" cy="17" r="${R}" fill="none" stroke="#f2f2f7" stroke-width="2"/></svg>
-      <span class="cal-ring-num" style="color:#d1d1d6">${dn}</span>
-    </div></div>`;
+    html += `<div class="cal-ring-cell">${daySvg(dn, { textColor: '#d1d1d6' })}</div>`;
   }
 
   for (let d = 1; d <= days; d++) {
@@ -260,34 +270,28 @@ function renderCalendarGrid() {
     const full = doneCount > 0 && pct >= 1;
     const dashOffset = +(CIRC * (1 - pct)).toFixed(2);
 
-    let bgFill = 'none', strokeBg = '#f2f2f7', strokeBgW = 2, textColor = '#1c1c1e', fontWeight = 600, arcSvg = '';
-
+    let svgHtml;
     if (isToday) {
-      bgFill = '#5856d6'; strokeBg = 'none'; strokeBgW = 0;
-      textColor = 'white'; fontWeight = 800;
-      if (full) arcSvg = `<circle cx="17" cy="17" r="${R}" fill="none" stroke="#34c759" stroke-width="2.5"/>`;
+      const outerRing = full ? `<circle cx="17" cy="17" r="${R}" fill="none" stroke="#34c759" stroke-width="2.5"/>` : '';
+      svgHtml = `<svg width="34" height="34" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="17" cy="17" r="${R}" fill="#5856d6"/>
+        ${outerRing}
+        <text x="17" y="21.5" text-anchor="middle" font-size="11.5" font-weight="bold" fill="white" font-family="-apple-system,sans-serif">${d}</text>
+      </svg>`;
     } else if (isFuture) {
-      textColor = '#c7c7cc';
-    } else if (pct > 0) {
-      const col = full ? '#34c759' : '#5856d6';
-      arcSvg = `<circle cx="17" cy="17" r="${R}" fill="none" stroke="${col}" stroke-width="2.5" stroke-dasharray="${CIRC}" stroke-dashoffset="${dashOffset}" stroke-linecap="round" transform="rotate(-90 17 17)"/>`;
+      svgHtml = daySvg(d, { textColor: '#c7c7cc' });
+    } else {
+      const arcColor = pct > 0 ? (full ? '#34c759' : '#5856d6') : '';
+      svgHtml = daySvg(d, { arcColor, arcOffset: dashOffset });
     }
 
-    html += `<div class="cal-ring-cell" data-day="${d}" style="cursor:${isFuture ? 'default' : 'pointer'}">
-      <div class="cal-ring-wrap">
-        <svg viewBox="0 0 34 34"><circle cx="17" cy="17" r="${R}" fill="${bgFill}" stroke="${strokeBg}" stroke-width="${strokeBgW}"/>${arcSvg}</svg>
-        <span class="cal-ring-num" style="color:${textColor};font-weight:${fontWeight}">${d}</span>
-      </div>
-    </div>`;
+    html += `<div class="cal-ring-cell" data-day="${d}">${svgHtml}</div>`;
   }
 
   const totalCells = startOffset + days;
   const nextFill = Math.ceil(totalCells / 7) * 7 - totalCells;
   for (let i = 1; i <= nextFill; i++) {
-    html += `<div class="cal-ring-cell"><div class="cal-ring-wrap">
-      <svg viewBox="0 0 34 34"><circle cx="17" cy="17" r="${R}" fill="none" stroke="#f2f2f7" stroke-width="2"/></svg>
-      <span class="cal-ring-num" style="color:#d1d1d6">${i}</span>
-    </div></div>`;
+    html += `<div class="cal-ring-cell">${daySvg(i, { textColor: '#d1d1d6' })}</div>`;
   }
 
   html += '</div></div>';

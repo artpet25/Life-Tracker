@@ -230,10 +230,8 @@
   /* Ring calendar */
   .cal-ring-outer { padding: 2px 0 4px; }
   .cal-ring-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px 0; }
-  .cal-ring-cell { display: flex; align-items: center; justify-content: center; }
-  .cal-ring-wrap { position: relative; width: 34px; height: 34px; flex-shrink: 0; }
-  .cal-ring-wrap svg { position: absolute; top: 0; left: 0; width: 34px !important; height: 34px !important; display: block; }
-  .cal-ring-num { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 12px; font-weight: 600; line-height: 1; pointer-events: none; }
+  .cal-ring-cell { display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .cal-ring-cell svg { display: block; flex-shrink: 0; width: 34px; height: 34px; overflow: visible; }
   .cal-month-title { font-size: 20px; font-weight: 700; color: #1c1c1e; }
 
   /* Stats section */
