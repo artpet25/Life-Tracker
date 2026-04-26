@@ -606,6 +606,19 @@ function getHabitVisual(name, index) {
   return defaults[index % defaults.length];
 }
 
+async function validateAllHabits(day) {
+  const dataAvailable = selectedDate.getFullYear() === state.year && selectedDate.getMonth() === state.month;
+  if (!dataAvailable) return;
+  if (!state.data[day]) state.data[day] = {};
+  state.habits.forEach((name, i) => {
+    if (name.trim()) state.data[day][i] = 1;
+  });
+  await saveMonth();
+  renderTodayHabits();
+  renderWeekStrip();
+  renderCalendarGrid();
+}
+
 function renderTodayHabits() {
   const pendingSection = document.getElementById('pendingSection');
   const doneSection = document.getElementById('doneSection');
@@ -649,8 +662,19 @@ function renderTodayHabits() {
     else pendingHtml += card;
   });
 
+  const hasPending = pendingHtml.length > 0;
+  if (dataAvailable && hasPending) {
+    pendingHtml += `<button class="validate-all-btn" id="validateAllBtn">✓ Tout valider</button>`;
+  }
   pendingSection.innerHTML = pendingHtml;
   if (doneSection) doneSection.innerHTML = doneHtml;
+
+  if (dataAvailable && hasPending) {
+    document.getElementById('validateAllBtn')?.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      validateAllHabits(selDay);
+    });
+  }
 
   document.querySelectorAll('.habit-card-btn').forEach(btn => {
     btn.addEventListener('pointerdown', e => {
