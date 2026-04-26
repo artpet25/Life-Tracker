@@ -221,48 +221,139 @@ function renderCalendarGrid() {
   const days = daysInMonth(state.year, state.month);
   const today = new Date();
   const isCurrentMonth = today.getFullYear() === state.year && today.getMonth() === state.month;
-  const todayDay = isCurrentMonth ? today.getDate() : -1;
   const isFutureMonth = (state.year > today.getFullYear()) || (state.year === today.getFullYear() && state.month > today.getMonth());
+  const todayDay = isCurrentMonth ? today.getDate() : -1;
   const activeCount = state.habits.filter(h => h.trim()).length;
 
   const firstDow = new Date(state.year, state.month, 1).getDay();
-  const offset = firstDow === 0 ? 6 : firstDow - 1;
-  const DAY_LABELS = ['L','M','M','J','V','S','D'];
+  const startOffset = firstDow === 0 ? 6 : firstDow - 1;
+  const prevMonthDays = daysInMonth(
+    state.month === 0 ? state.year - 1 : state.year,
+    state.month === 0 ? 11 : state.month - 1
+  );
 
-  let html = '<div class="cal-row-headers">';
-  DAY_LABELS.forEach(d => { html += `<div class="cal-row-header">${d}</div>`; });
-  html += '</div><div class="cal-days-grid">';
-  for (let i = 0; i < offset; i++) html += '<div class="cal-cell blank"></div>';
+  const R = 14, CIRC = +(2 * Math.PI * R).toFixed(2);
+  const DAY_LABELS = ['L.','M.','M.','J.','V.','S.','D.'];
+
+  let html = '<div class="cal-ring-outer">';
+  html += '<div class="cal-row-headers">';
+  DAY_LABELS.forEach(l => { html += `<div class="cal-row-header">${l}</div>`; });
+  html += '</div><div class="cal-ring-days">';
+
+  for (let i = 0; i < startOffset; i++) {
+    const dn = prevMonthDays - startOffset + 1 + i;
+    html += `<div class="cal-ring-cell"><div class="cal-ring-wrap">
+      <svg viewBox="0 0 34 34"><circle cx="17" cy="17" r="${R}" fill="none" stroke="#f2f2f7" stroke-width="2"/></svg>
+      <span class="cal-ring-num" style="color:#d1d1d6">${dn}</span>
+    </div></div>`;
+  }
 
   for (let d = 1; d <= days; d++) {
-    const dow = new Date(state.year, state.month, d).getDay();
-    const isWeekend = dow === 0 || dow === 6;
     const isToday = d === todayDay;
     const isFuture = isFutureMonth || (isCurrentMonth && d > todayDay);
-    let cls = 'cal-cell' + (isWeekend ? ' weekend' : '') + (isToday ? ' today' : '');
-    if (isFuture) {
-      cls += ' future';
-    } else {
-      const dayData = state.data[d] || {};
-      const doneCount = Object.values(dayData).filter(v => v === 1).length;
-      const failCount = Object.values(dayData).filter(v => v === 2).length;
-      if (activeCount > 0 && doneCount >= activeCount) cls += ' done';
-      else if (doneCount > 0) cls += ' partial';
-      else if (failCount > 0) cls += ' fail';
-      else cls += ' empty';
+
+    let doneCount = 0;
+    if (!isFuture && activeCount > 0) {
+      doneCount = Object.values(state.data[d] || {}).filter(v => v === 1).length;
     }
-    html += `<div class="${cls}">${d}</div>`;
+    const pct = activeCount > 0 ? doneCount / activeCount : 0;
+    const full = doneCount > 0 && pct >= 1;
+    const dashOffset = +(CIRC * (1 - pct)).toFixed(2);
+
+    let bgFill = 'none', strokeBg = '#f2f2f7', strokeBgW = 2, textColor = '#1c1c1e', fontWeight = 600, arcSvg = '';
+
+    if (isToday) {
+      bgFill = '#5856d6'; strokeBg = 'none'; strokeBgW = 0;
+      textColor = 'white'; fontWeight = 800;
+      if (full) arcSvg = `<circle cx="17" cy="17" r="${R}" fill="none" stroke="#34c759" stroke-width="2.5"/>`;
+    } else if (isFuture) {
+      textColor = '#c7c7cc';
+    } else if (pct > 0) {
+      const col = full ? '#34c759' : '#5856d6';
+      arcSvg = `<circle cx="17" cy="17" r="${R}" fill="none" stroke="${col}" stroke-width="2.5" stroke-dasharray="${CIRC}" stroke-dashoffset="${dashOffset}" stroke-linecap="round" transform="rotate(-90 17 17)"/>`;
+    }
+
+    html += `<div class="cal-ring-cell" data-day="${d}" style="cursor:${isFuture ? 'default' : 'pointer'}">
+      <div class="cal-ring-wrap">
+        <svg viewBox="0 0 34 34"><circle cx="17" cy="17" r="${R}" fill="${bgFill}" stroke="${strokeBg}" stroke-width="${strokeBgW}"/>${arcSvg}</svg>
+        <span class="cal-ring-num" style="color:${textColor};font-weight:${fontWeight}">${d}</span>
+      </div>
+    </div>`;
   }
-  html += '</div>';
+
+  const totalCells = startOffset + days;
+  const nextFill = Math.ceil(totalCells / 7) * 7 - totalCells;
+  for (let i = 1; i <= nextFill; i++) {
+    html += `<div class="cal-ring-cell"><div class="cal-ring-wrap">
+      <svg viewBox="0 0 34 34"><circle cx="17" cy="17" r="${R}" fill="none" stroke="#f2f2f7" stroke-width="2"/></svg>
+      <span class="cal-ring-num" style="color:#d1d1d6">${i}</span>
+    </div></div>`;
+  }
+
+  html += '</div></div>';
   gridEl.innerHTML = html;
 
-  gridEl.querySelectorAll('.cal-cell:not(.blank)').forEach(cell => {
+  gridEl.querySelectorAll('.cal-ring-cell[data-day]').forEach(cell => {
     cell.addEventListener('pointerdown', e => {
       e.preventDefault();
-      const day = parseInt(cell.textContent, 10);
-      if (!isNaN(day)) switchToTodayForDate(new Date(state.year, state.month, day));
+      switchToTodayForDate(new Date(state.year, state.month, parseInt(cell.dataset.day, 10)));
     });
   });
+
+  renderCalStats();
+}
+
+function renderCalStats() {
+  const statsEl = document.getElementById('calStats');
+  if (!statsEl) return;
+  const activeCount = state.habits.filter(h => h.trim()).length;
+  if (!activeCount) { statsEl.innerHTML = ''; return; }
+
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === state.year && today.getMonth() === state.month;
+  const isPastMonth = (state.year < today.getFullYear()) || (state.year === today.getFullYear() && state.month < today.getMonth());
+  const days = daysInMonth(state.year, state.month);
+  const maxDay = isCurrentMonth ? today.getDate() : (isPastMonth ? days : 0);
+
+  let doneDays = 0, totalPossible = 0, doneHabits = 0;
+  let run = 0, bestStreak = 0;
+  for (let d = 1; d <= maxDay; d++) {
+    const vals = Object.values(state.data[d] || {});
+    const dn = vals.filter(v => v === 1).length;
+    doneHabits += dn; totalPossible += activeCount;
+    if (dn >= activeCount) doneDays++;
+    if (vals.some(v => v === 1)) { run++; bestStreak = Math.max(bestStreak, run); }
+    else run = 0;
+  }
+
+  const currentStreak = isCurrentMonth ? calcStreak() : 0;
+  const rate = totalPossible > 0 ? Math.round((doneHabits / totalPossible) * 100) : 0;
+  const periodLabel = isCurrentMonth ? 'Ce mois' : `${MONTHS_SHORT_FR[state.month]} ${state.year}`;
+
+  statsEl.innerHTML = `<div class="stats-section">
+    <div class="stats-header">
+      <span class="stats-title">Records</span>
+      <span class="stats-period-label">${periodLabel}</span>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-card-top"><span class="stat-card-num">${currentStreak}</span><span class="stat-card-icon">🔥</span></div>
+        <div class="stat-card-label">Série en cours</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-top"><span class="stat-card-num">${bestStreak}</span><span class="stat-card-icon">🏅</span></div>
+        <div class="stat-card-label">Meilleure série</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-top"><span class="stat-card-num">${doneDays}</span><span class="stat-card-icon">📋</span></div>
+        <div class="stat-card-label">Terminé</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-top"><span class="stat-card-num">${rate} %</span><span class="stat-card-icon">🏁</span></div>
+        <div class="stat-card-label">Taux de réussite</div>
+      </div>
+    </div>
+  </div>`;
 }
 
 function switchToTodayForDate(date) {
