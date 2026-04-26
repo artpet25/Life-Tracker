@@ -70,9 +70,9 @@
   .cal-cell:not(.blank):not(.future) { cursor: pointer; }
   .cal-cell.future { cursor: pointer; }
   .pillar-tag { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
-  .pillar-body { background: #e8f0ff; color: #0a84ff; }
-  .pillar-mind { background: #f3e8ff; color: #bf5af2; }
-  .pillar-spirit { background: #fff3e0; color: #ff9f0a; }
+  .pillar-body { background: #ffe5e5; color: #d63030; }
+  .pillar-mind { background: #f0ecff; color: #7c5af2; }
+  .pillar-spirit { background: #e5eeff; color: #3b7ef0; }
 
   /* FAB */
   .fab { position: fixed; bottom: 96px; right: 20px; width: 58px; height: 58px; background: #5856d6; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; line-height: 1; box-shadow: 0 4px 20px rgba(88,86,214,0.45); border: none; cursor: pointer; z-index: 40; }
@@ -248,6 +248,13 @@
   .stat-card-num { font-size: 28px; font-weight: 700; color: #1c1c1e; line-height: 1.1; }
   .stat-card-icon { font-size: 22px; }
   .stat-card-label { font-size: 10px; font-weight: 700; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 8px; }
+
+  /* Piliers overlay */
+  #piliersOverlay { position: fixed; inset: 0; background: #f0ece3; z-index: 200; display: none; flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .piliers-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 0; padding-top: max(env(safe-area-inset-top, 0px), 16px); }
+  .piliers-title { font-size: 22px; font-weight: 800; color: #1c1c1e; letter-spacing: -0.3px; }
+  .piliers-close { background: rgba(0,0,0,0.1); border: none; width: 34px; height: 34px; border-radius: 50%; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #1c1c1e; line-height: 1; flex-shrink: 0; }
+  .piliers-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 10px 20px 40px; }
 </style>
 </head>
 <body>
@@ -259,7 +266,7 @@
   <div class="topbar">
     <button class="topbar-menu">☰</button>
     <div class="topbar-actions">
-      <button class="topbar-action-btn">💡</button>
+      <button class="topbar-action-btn" id="piliersBtn">💡</button>
       <span class="topbar-dots">•••</span>
     </div>
   </div>
@@ -407,6 +414,42 @@
       <button class="btn" id="reorderCancel">Annuler</button>
       <button class="btn btn-primary" id="reorderSave">Enregistrer</button>
     </div>
+  </div>
+</div>
+
+<!-- Piliers overlay -->
+<div id="piliersOverlay">
+  <div class="piliers-header">
+    <div class="piliers-title">Mes Piliers</div>
+    <button class="piliers-close" id="piliersClose">×</button>
+  </div>
+  <div class="piliers-body">
+    <svg viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:360px;display:block;">
+      <rect width="300" height="400" fill="#f0ece3"/>
+      <!-- Three circles with multiply blend for authentic overlaps -->
+      <circle cx="150" cy="104" r="86" fill="#9b7ee8" style="mix-blend-mode:multiply"/>
+      <circle cx="106" cy="207" r="86" fill="#5b8de8" style="mix-blend-mode:multiply"/>
+      <circle cx="194" cy="207" r="86" fill="#e86060" style="mix-blend-mode:multiply"/>
+      <!-- Outer gold circle -->
+      <circle cx="150" cy="175" r="143" fill="none" stroke="#c9a84c" stroke-width="1.5"/>
+      <!-- MIND (top) — violet -->
+      <text x="150" y="34" text-anchor="middle" font-family="Georgia,serif" font-size="14" font-weight="bold" fill="#3d1a7a" letter-spacing="1.5">MIND</text>
+      <text x="150" y="49" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9.5" fill="#4a2290">Amour · Travail · Loisirs</text>
+      <!-- SPIRIT (bottom-left) — bleu -->
+      <text x="72" y="218" text-anchor="middle" font-family="Georgia,serif" font-size="14" font-weight="bold" fill="#0a2060" letter-spacing="1.5">SPIRIT</text>
+      <text x="72" y="232" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#0a2060">Méditation · Yoga</text>
+      <text x="72" y="244" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#0a2060">Bienveillance · Créativité</text>
+      <text x="72" y="256" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#0a2060">Inspiration</text>
+      <!-- BODY (bottom-right) — rouge -->
+      <text x="228" y="218" text-anchor="middle" font-family="Georgia,serif" font-size="14" font-weight="bold" fill="#6a0a0a" letter-spacing="1.5">BODY</text>
+      <text x="228" y="232" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#6a0a0a">Exercice · Étirement</text>
+      <text x="228" y="244" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#6a0a0a">Respiration · Sommeil</text>
+      <text x="228" y="256" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#6a0a0a">Alimentation · Sexualité</text>
+      <!-- FAMILLE & AMIS -->
+      <line x1="28" y1="364" x2="96" y2="364" stroke="#c9a84c" stroke-width="1"/>
+      <text x="150" y="368" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="10" font-weight="600" fill="#8e6a30" letter-spacing="3">FAMILLE &amp; AMIS</text>
+      <line x1="204" y1="364" x2="272" y2="364" stroke="#c9a84c" stroke-width="1"/>
+    </svg>
   </div>
 </div>
 
