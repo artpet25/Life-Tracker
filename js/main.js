@@ -563,9 +563,9 @@ function renderWeekStrip() {
 // ── Today view ────────────────────────────────────────────────────────────────
 
 const PILLAR_COLORS = {
-  body:   { bg: '#e8f0ff', color: '#0a84ff' },
-  mind:   { bg: '#f3e8ff', color: '#bf5af2' },
-  spirit: { bg: '#fff3e0', color: '#ff9f0a' },
+  body:   { bg: '#ffe5e5', color: '#d63030' },
+  mind:   { bg: '#f0ecff', color: '#7c5af2' },
+  spirit: { bg: '#fff9d0', color: '#b07800' },
 };
 
 function getHabitVisual(name, index) {
