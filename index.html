@@ -424,32 +424,34 @@
     <button class="piliers-close" id="piliersClose">×</button>
   </div>
   <div class="piliers-body">
-    <svg viewBox="0 0 300 385" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:360px;display:block;">
-      <rect width="300" height="385" fill="#f0ece3"/>
-      <!-- Three circles — triangle équilatéral centré (centroïde 150,170 ; R=60 ; r=82) -->
-      <!-- MIND (top) : (150, 110) — SPIRIT (bot-left) : (98, 200) — BODY (bot-right) : (202, 200) -->
-      <circle cx="150" cy="110" r="82" fill="#9b7ee8" style="mix-blend-mode:multiply"/>
-      <circle cx="98"  cy="200" r="82" fill="#f0c840" style="mix-blend-mode:multiply"/>
-      <circle cx="202" cy="200" r="82" fill="#e86060" style="mix-blend-mode:multiply"/>
-      <!-- Outer gold circle -->
-      <circle cx="150" cy="170" r="148" fill="none" stroke="#c9a84c" stroke-width="1.5"/>
-      <!-- MIND (top) — violet -->
-      <text x="150" y="42" text-anchor="middle" font-family="Georgia,serif" font-size="14" font-weight="bold" fill="#3d1a7a" letter-spacing="1.5">MIND</text>
-      <text x="150" y="57" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9.5" fill="#4a2290">Amour · Travail · Loisirs</text>
-      <!-- SPIRIT (bottom-left) — jaune -->
-      <text x="68" y="230" text-anchor="middle" font-family="Georgia,serif" font-size="14" font-weight="bold" fill="#5c3800" letter-spacing="1.5">SPIRIT</text>
-      <text x="68" y="244" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#5c3800">Méditation · Yoga</text>
-      <text x="68" y="256" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#5c3800">Bienveillance · Créativité</text>
-      <text x="68" y="268" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#5c3800">Inspiration</text>
-      <!-- BODY (bottom-right) — rouge -->
-      <text x="232" y="230" text-anchor="middle" font-family="Georgia,serif" font-size="14" font-weight="bold" fill="#6a0a0a" letter-spacing="1.5">BODY</text>
-      <text x="232" y="244" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#6a0a0a">Exercice · Étirement</text>
-      <text x="232" y="256" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#6a0a0a">Respiration · Sommeil</text>
-      <text x="232" y="268" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#6a0a0a">Alimentation · Sexualité</text>
+    <!--
+      Proportions référence : outer_r=145, inner_r=92 (63%), R=53
+      Centroïde (150,162) — côté triangle = R√3 = 91.8 — empiètement 50%
+      MIND (150,109) · SPIRIT (104,189) · BODY (196,189)
+    -->
+    <svg viewBox="0 0 300 348" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:360px;display:block;">
+      <rect width="300" height="348" fill="#f0ece3"/>
+      <circle cx="150" cy="109" r="92" fill="#9b7ee8" style="mix-blend-mode:multiply"/>
+      <circle cx="104" cy="189" r="92" fill="#f0c840" style="mix-blend-mode:multiply"/>
+      <circle cx="196" cy="189" r="92" fill="#e86060" style="mix-blend-mode:multiply"/>
+      <circle cx="150" cy="162" r="145" fill="none" stroke="#c9a84c" stroke-width="1.5"/>
+      <!-- MIND — violet -->
+      <text x="150" y="28" text-anchor="middle" font-family="Georgia,serif" font-size="14" font-weight="bold" fill="#3d1a7a" letter-spacing="1.5">MIND</text>
+      <text x="150" y="43" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9.5" fill="#4a2290">Amour · Travail · Loisirs</text>
+      <!-- SPIRIT — jaune -->
+      <text x="63" y="212" text-anchor="middle" font-family="Georgia,serif" font-size="14" font-weight="bold" fill="#5c3800" letter-spacing="1.5">SPIRIT</text>
+      <text x="63" y="226" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#5c3800">Méditation · Yoga</text>
+      <text x="63" y="238" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#5c3800">Bienveillance · Créativité</text>
+      <text x="63" y="250" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#5c3800">Inspiration</text>
+      <!-- BODY — rouge -->
+      <text x="237" y="212" text-anchor="middle" font-family="Georgia,serif" font-size="14" font-weight="bold" fill="#6a0a0a" letter-spacing="1.5">BODY</text>
+      <text x="237" y="226" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#6a0a0a">Exercice · Étirement</text>
+      <text x="237" y="238" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#6a0a0a">Respiration · Sommeil</text>
+      <text x="237" y="250" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#6a0a0a">Alimentation · Sexualité</text>
       <!-- FAMILLE & AMIS -->
-      <line x1="28" y1="352" x2="96" y2="352" stroke="#c9a84c" stroke-width="1"/>
-      <text x="150" y="356" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="10" font-weight="600" fill="#8e6a30" letter-spacing="3">FAMILLE &amp; AMIS</text>
-      <line x1="204" y1="352" x2="272" y2="352" stroke="#c9a84c" stroke-width="1"/>
+      <line x1="26" y1="325" x2="96" y2="325" stroke="#c9a84c" stroke-width="1"/>
+      <text x="150" y="329" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="10" font-weight="600" fill="#8e6a30" letter-spacing="3">FAMILLE &amp; AMIS</text>
+      <line x1="204" y1="325" x2="274" y2="325" stroke="#c9a84c" stroke-width="1"/>
     </svg>
   </div>
 </div>
