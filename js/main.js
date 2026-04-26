@@ -261,6 +261,9 @@ function renderCalendarGrid() {
   for (let d = 1; d <= days; d++) {
     const isToday = d === todayDay;
     const isFuture = isFutureMonth || (isCurrentMonth && d > todayDay);
+    const dow = new Date(state.year, state.month, d).getDay();
+    const isWeekend = dow === 0 || dow === 6;
+    const bgRing = isWeekend ? '#dddaf5' : '#f2f2f7';
 
     let doneCount = 0;
     if (!isFuture && activeCount > 0) {
@@ -279,10 +282,10 @@ function renderCalendarGrid() {
         <text x="17" y="21.5" text-anchor="middle" font-size="11.5" font-weight="bold" fill="white" font-family="-apple-system,sans-serif">${d}</text>
       </svg>`;
     } else if (isFuture) {
-      svgHtml = daySvg(d, { textColor: '#c7c7cc' });
+      svgHtml = daySvg(d, { textColor: '#c7c7cc', ringColor: bgRing });
     } else {
       const arcColor = pct > 0 ? (full ? '#34c759' : '#5856d6') : '';
-      svgHtml = daySvg(d, { arcColor, arcOffset: dashOffset });
+      svgHtml = daySvg(d, { arcColor, arcOffset: dashOffset, ringColor: bgRing });
     }
 
     html += `<div class="cal-ring-cell" data-day="${d}">${svgHtml}</div>`;
