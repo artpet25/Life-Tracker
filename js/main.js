@@ -211,6 +211,13 @@ document.getElementById('nextMonthFocus').addEventListener('click', async () => 
 
 document.getElementById('fabBtn').addEventListener('click', openSettings);
 
+document.getElementById('piliersBtn').addEventListener('click', () => {
+  document.getElementById('piliersOverlay').style.display = 'flex';
+});
+document.getElementById('piliersClose').addEventListener('click', () => {
+  document.getElementById('piliersOverlay').style.display = 'none';
+});
+
 // ── Calendar grid ────────────────────────────────────────────────────────────
 
 function renderCalendarGrid() {
