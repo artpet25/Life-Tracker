@@ -1,5 +1,12 @@
-const HABITS_KEY = 'habits:list:v4', MAX_HABITS = 12, MIN_HABITS = 1;
-const INITIAL_HABITS = ['', '', '', ''];
+const HABITS_KEY = 'habits:list:v5', MAX_HABITS = 12, MIN_HABITS = 1;
+const INITIAL_HABITS = [
+  'Sport / renfo / repos',
+  'Alimentation',
+  'Douche froide',
+  'Vitamine',
+  'Lecture',
+  'Méditation prière',
+];
 const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 const SVG_SIZE = 640, CENTER = 320, OUTER_R = 290, INNER_R = 110;
 const A_START = -Math.PI / 2 + 0.02, A_END = Math.PI;
@@ -564,6 +571,8 @@ const PILLAR_COLORS = {
 function getHabitVisual(name, index) {
   const n = (name || '').toLowerCase();
   if (/douche|shower/.test(n))                   return { pillar: 'body',   emoji: '🚿' };
+  if (/vitamine|vitamin|supplém/.test(n))        return { pillar: 'body',   emoji: '💊' };
+  if (/prière|priere|prayer/.test(n))            return { pillar: 'spirit', emoji: '🙏' };
   if (/run|courir|jogg/.test(n))                  return { pillar: 'body',   emoji: '🏃' };
   if (/jolt/.test(n))                             return { pillar: 'body',   emoji: '⚡' };
   if (/étirement|etirement|stretch/.test(n))      return { pillar: 'body',   emoji: '🤸' };
