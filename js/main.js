@@ -1,7 +1,7 @@
-const HABITS_KEY = 'habits:list:v5', MAX_HABITS = 12, MIN_HABITS = 1;
+const HABITS_KEY = 'habits:list:v6', MAX_HABITS = 12, MIN_HABITS = 1;
 const INITIAL_HABITS = [
   'Sport / renfo / repos',
-  'Alimentation',
+  'Daily Légumes',
   'Douche froide',
   'Vitamine',
   'Lecture',
@@ -932,11 +932,59 @@ function renderSuggestions(query) {
 
 function pickSuggestion(i){const s=currentSuggestions[i];if(!s)return;document.getElementById('fruitInput').value=s.name;document.getElementById('suggestions').classList.add('hidden');suggestionIndex=-1;currentSuggestions=[];addFruit();}
 
+async function syncDailyLegumes() {
+  const today = new Date();
+  const cw = getISOWeek(today);
+  if (fruitState.year !== cw.year || fruitState.week !== cw.week) return;
+
+  const habitIdx = state.habits.findIndex(h => /légume/i.test(h));
+  if (habitIdx < 0) return;
+
+  const todayYear = today.getFullYear(), todayMonth = today.getMonth(), todayDay = today.getDate();
+  const count = fruitState.items.length;
+
+  const onCurrentMonth = state.year === todayYear && state.month === todayMonth;
+  let monthData;
+  if (onCurrentMonth) {
+    monthData = state.data;
+  } else {
+    try { const r = await window.storage.get(dataKey(todayYear, todayMonth)); monthData = r && r.value ? JSON.parse(r.value) : {}; }
+    catch(e) { monthData = {}; }
+  }
+
+  if (count >= 30) {
+    const monday = getWeekMonday(0);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday); d.setDate(monday.getDate() + i);
+      if (d.getFullYear() === todayYear && d.getMonth() === todayMonth && d.getDate() <= todayDay) {
+        if (!monthData[d.getDate()]) monthData[d.getDate()] = {};
+        monthData[d.getDate()][habitIdx] = 1;
+      }
+    }
+  } else if (count > 0) {
+    if (!monthData[todayDay]) monthData[todayDay] = {};
+    monthData[todayDay][habitIdx] = 1;
+  } else {
+    if (monthData[todayDay]) {
+      delete monthData[todayDay][habitIdx];
+      if (!Object.keys(monthData[todayDay]).length) delete monthData[todayDay];
+    }
+  }
+
+  try { await window.storage.set(dataKey(todayYear, todayMonth), JSON.stringify(monthData)); } catch(e) {}
+
+  if (onCurrentMonth) {
+    state.data = monthData;
+    renderTodayHabits(); renderWeekStrip(); renderCalendarGrid();
+  }
+}
+
 async function addFruit() {
   const input=document.getElementById('fruitInput'),raw=input.value.trim(); if(!raw)return;
   const norm=normalizeName(raw),existing=fruitState.items.find(it=>normalizeName(it.name)===norm);
   if(existing){existing.qty++;}else{const g=guessItem(raw);fruitState.items.push({name:raw,emoji:g.e,type:g.t,season:g.s||[],qty:1});}
-  input.value='';document.getElementById('suggestions').classList.add('hidden');currentSuggestions=[];await saveFruits();renderFruits();
+  input.value='';document.getElementById('suggestions').classList.add('hidden');currentSuggestions=[];
+  await saveFruits(); syncDailyLegumes(); renderFruits();
 }
 
 function renderSeasonStrip() {
@@ -972,13 +1020,13 @@ function renderFruits() {
     return`<div class="section-header"><span class="section-title">${emoji} ${title}</span><span class="section-count">${arr.length}</span></div>${arr.map((entry,idx)=>{const inS=entry.item.season&&entry.item.season.includes(mo);return`<div class="fruit-item${inS?' in-season':''}"><span class="idx">${idx+1}.</span><div class="name-wrap"><span class="emoji">${entry.item.emoji}</span><span class="name">${escapeAttr(entry.item.name)}</span>${inS?'<span class="season-badge">🌱</span>':''}${entry.item.qty>1?`<span class="qty-badge">×${entry.item.qty}</span>`:''}</div><div class="qty-controls"><button class="qty-btn" data-act="dec" data-i="${entry.i}">−</button><span class="qty-num">${entry.item.qty}</span><button class="qty-btn" data-act="inc" data-i="${entry.i}">+</button></div><button class="type-toggle" data-act="toggle" data-i="${entry.i}">${entry.item.type==='f'?'🥕':'🍎'}</button><button class="del" data-act="del" data-i="${entry.i}">×</button></div>`;}).join('')}`;
   };
   list.innerHTML=renderSection('Fruits','🍎',fruitsArr)+renderSection('Légumes','🥕',veggiesArr);
-  list.querySelectorAll('button[data-act]').forEach(btn=>btn.addEventListener('click',e=>{
+  list.querySelectorAll('button[data-act]').forEach(btn=>btn.addEventListener('click',async e=>{
     const i=parseInt(e.currentTarget.dataset.i,10),act=e.currentTarget.dataset.act;
     if(act==='inc')fruitState.items[i].qty++;
     else if(act==='dec')fruitState.items[i].qty=Math.max(1,fruitState.items[i].qty-1);
     else if(act==='del')fruitState.items.splice(i,1);
     else if(act==='toggle')fruitState.items[i].type=fruitState.items[i].type==='f'?'v':'f';
-    saveFruits();renderFruits();
+    await saveFruits(); syncDailyLegumes(); renderFruits();
   }));
 }
 
