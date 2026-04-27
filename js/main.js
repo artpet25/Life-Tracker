@@ -674,9 +674,11 @@ function renderTodayHabits() {
 
   const hasPending = pendingHtml.length > 0;
 
+  const isToday = selectedDate.toDateString() === new Date().toDateString();
   if (topbarValidateBtn) {
-    if (dataAvailable && hasPending) {
+    if (dataAvailable && isToday) {
       topbarValidateBtn.style.display = 'flex';
+      topbarValidateBtn.style.opacity = hasPending ? '1' : '0.3';
       topbarValidateBtn.dataset.day = selDay;
     } else {
       topbarValidateBtn.style.display = 'none';
@@ -941,7 +943,7 @@ async function syncDailyLegumes() {
   if (habitIdx < 0) return;
 
   const todayYear = today.getFullYear(), todayMonth = today.getMonth(), todayDay = today.getDate();
-  const count = fruitState.items.length;
+  const count = fruitState.items.reduce((s, it) => s + (it.qty || 1), 0);
 
   const onCurrentMonth = state.year === todayYear && state.month === todayMonth;
   let monthData;
@@ -1003,14 +1005,16 @@ function renderFruits() {
   document.getElementById('weekDates').textContent=`${fruitState.year} · ${formatWeekDates(fruitState.year,fruitState.week)}`;
   fruitState.items.forEach(it=>{if(!it.type)it.type=guessItem(it.name).t;if(!it.season)it.season=guessItem(it.name).s||[];});
   renderSeasonStrip();
-  const mo=currentMonth(),count=fruitState.items.length;
-  const fruitsOnly=fruitState.items.filter(it=>it.type!=='v').length,veggiesOnly=fruitState.items.filter(it=>it.type==='v').length;
-  document.getElementById('fruitsCount').textContent=count;
-  document.getElementById('fruitsOnlyCount').textContent=fruitsOnly;
-  document.getElementById('veggiesCount').textContent=veggiesOnly;
-  const pct=Math.min(100,(count/FRUIT_GOAL)*100);
+  const mo=currentMonth();
+  const totalQty=fruitState.items.reduce((s,it)=>s+(it.qty||1),0);
+  const fruitsQty=fruitState.items.filter(it=>it.type!=='v').reduce((s,it)=>s+(it.qty||1),0);
+  const veggiesQty=fruitState.items.filter(it=>it.type==='v').reduce((s,it)=>s+(it.qty||1),0);
+  document.getElementById('fruitsCount').textContent=totalQty;
+  document.getElementById('fruitsOnlyCount').textContent=fruitsQty;
+  document.getElementById('veggiesCount').textContent=veggiesQty;
+  const pct=Math.min(100,(totalQty/FRUIT_GOAL)*100);
   document.getElementById('progressFill').style.width=pct+'%';
-  document.getElementById('progressFill').style.background=count>=FRUIT_GOAL?'#34c759':'#5856d6';
+  document.getElementById('progressFill').style.background=totalQty>=FRUIT_GOAL?'#34c759':'#5856d6';
   const list=document.getElementById('fruitsList');
   if(!fruitState.items.length){list.innerHTML='<div class="fruits-empty">Aucun fruit ou légume cette semaine.<br>Commence par en ajouter un ci-dessus.</div>';return;}
   const fruitsArr=[],veggiesArr=[];
