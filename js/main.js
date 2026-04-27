@@ -218,6 +218,13 @@ document.getElementById('nextMonthFocus').addEventListener('click', async () => 
 
 document.getElementById('fabBtn').addEventListener('click', openSettings);
 
+document.getElementById('validateAllTopbar').addEventListener('pointerdown', e => {
+  e.preventDefault();
+  const btn = document.getElementById('validateAllTopbar');
+  const day = parseInt(btn.dataset.day, 10);
+  if (day) validateAllHabits(day);
+});
+
 document.getElementById('piliersBtn').addEventListener('click', () => {
   document.getElementById('piliersOverlay').style.display = 'flex';
 });
@@ -343,7 +350,7 @@ function renderCalStats() {
     const dn = vals.filter(v => v === 1).length;
     doneHabits += dn; totalPossible += activeCount;
     if (dn >= activeCount) doneDays++;
-    if (vals.some(v => v === 1)) { run++; bestStreak = Math.max(bestStreak, run); }
+    if (dn >= activeCount) { run++; bestStreak = Math.max(bestStreak, run); }
     else run = 0;
   }
 
@@ -394,12 +401,13 @@ function switchToTodayForDate(date) {
 
 function calcStreak() {
   const today = new Date();
-  if (!state.habits.filter(h => h.trim()).length) return 0;
+  const activeCount = state.habits.filter(h => h.trim()).length;
+  if (!activeCount) return 0;
   const todayDay = today.getDate();
-  const todayDone = Object.values(state.data[todayDay] || {}).some(v => v === 1);
+  const todayDone = Object.values(state.data[todayDay] || {}).filter(v => v === 1).length >= activeCount;
   let streak = 0;
   for (let d = todayDone ? todayDay : todayDay - 1; d >= 1; d--) {
-    if (Object.values(state.data[d] || {}).some(v => v === 1)) streak++;
+    if (Object.values(state.data[d] || {}).filter(v => v === 1).length >= activeCount) streak++;
     else break;
   }
   return streak;
@@ -473,7 +481,7 @@ function renderWeekStrip() {
 
   let streakSinceHtml = '';
   if (streak > 0 && state.year === today.getFullYear() && state.month === today.getMonth()) {
-    const todayDone = Object.values(state.data[today.getDate()] || {}).some(v => v === 1);
+    const todayDone = Object.values(state.data[today.getDate()] || {}).filter(v => v === 1).length >= activeCount;
     const startD = new Date(today);
     startD.setDate(today.getDate() - (todayDone ? streak - 1 : streak));
     streakSinceHtml = `<span class="s-streak-since">depuis le ${startD.getDate()} ${MONTHS_SHORT_FR[startD.getMonth()]}</span>`;
@@ -622,6 +630,7 @@ async function validateAllHabits(day) {
 function renderTodayHabits() {
   const pendingSection = document.getElementById('pendingSection');
   const doneSection = document.getElementById('doneSection');
+  const topbarValidateBtn = document.getElementById('validateAllTopbar');
   if (!pendingSection) return;
 
   const selDay = selectedDate.getDate();
@@ -632,6 +641,7 @@ function renderTodayHabits() {
   if (!activeHabits.length) {
     pendingSection.innerHTML = '<div class="habit-card" style="justify-content:center;color:#8e8e93;font-size:15px;text-align:center;">Aucune habitude.<br>Appuie sur + pour commencer.</div>';
     if (doneSection) doneSection.innerHTML = '';
+    if (topbarValidateBtn) topbarValidateBtn.style.display = 'none';
     return;
   }
 
@@ -663,18 +673,18 @@ function renderTodayHabits() {
   });
 
   const hasPending = pendingHtml.length > 0;
-  if (dataAvailable && hasPending) {
-    pendingHtml += `<button class="validate-all-btn" id="validateAllBtn">✓ Tout valider</button>`;
+
+  if (topbarValidateBtn) {
+    if (dataAvailable && hasPending) {
+      topbarValidateBtn.style.display = 'flex';
+      topbarValidateBtn.dataset.day = selDay;
+    } else {
+      topbarValidateBtn.style.display = 'none';
+    }
   }
+
   pendingSection.innerHTML = pendingHtml;
   if (doneSection) doneSection.innerHTML = doneHtml;
-
-  if (dataAvailable && hasPending) {
-    document.getElementById('validateAllBtn')?.addEventListener('pointerdown', e => {
-      e.preventDefault();
-      validateAllHabits(selDay);
-    });
-  }
 
   document.querySelectorAll('.habit-card-btn').forEach(btn => {
     btn.addEventListener('pointerdown', e => {
@@ -824,6 +834,9 @@ document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => btn.addEventListe
   const id = btn.dataset.tab;
 
   if (id === 'more') { openSettings(); return; }
+
+  const tvBtn = document.getElementById('validateAllTopbar');
+  if (tvBtn && id !== 'today') tvBtn.style.display = 'none';
 
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
