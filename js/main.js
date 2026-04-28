@@ -1,18 +1,27 @@
-const HABITS_KEY = 'habits:list:v6', MAX_HABITS = 12, MIN_HABITS = 1;
+const HABITS_KEY = 'habits:list:v7', HABITS_KEY_OLD = 'habits:list:v6', MAX_HABITS = 12, MIN_HABITS = 1;
 const INITIAL_HABITS = [
-  'Sport / renfo / repos',
-  'Daily Légumes',
-  'Douche froide',
-  'Vitamine',
-  'Lecture',
-  'Méditation prière',
+  { id: 'h1', name: 'Sport / renfo / repos' },
+  { id: 'h2', name: 'Daily Légumes' },
+  { id: 'h3', name: 'Douche froide' },
+  { id: 'h4', name: 'Vitamine' },
+  { id: 'h5', name: 'Lecture' },
+  { id: 'h6', name: 'Méditation prière' },
 ];
+function genId() { return 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+function todayStr() { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+// Read numeric value from a data entry (supports both old numeric and new {v,at} format)
+function getVal(day, id) { const e=state.data[day]?.[id]; if(!e) return 0; return typeof e==='object'?e.v||0:e; }
+function setVal(day, id, v) {
+  if (!state.data[day]) state.data[day] = {};
+  if (v === 0) { delete state.data[day][id]; if (!Object.keys(state.data[day]).length) delete state.data[day]; }
+  else state.data[day][id] = { v, at: todayStr() };
+}
 const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 const SVG_SIZE = 640, CENTER = 320, OUTER_R = 290, INNER_R = 110;
 const A_START = -Math.PI / 2 + 0.02, A_END = Math.PI;
 
 const state = {
-  habits: [...INITIAL_HABITS],
+  habits: INITIAL_HABITS.map(h => ({ ...h })),
   editBuffer: [],
   year: new Date().getFullYear(),
   month: new Date().getMonth(),
@@ -57,7 +66,8 @@ function updateAllMonthLabels() {
   if (mlf) mlf.textContent = lbl;
 }
 
-function dataKey(y, m) { return `habits:v4:${y}-${String(m+1).padStart(2,'0')}`; }
+function dataKey(y, m) { return `habits:v5:${y}-${String(m+1).padStart(2,'0')}`; }
+function dataKeyOld(y, m) { return `habits:v4:${y}-${String(m+1).padStart(2,'0')}`; }
 function daysInMonth(y, m) { return new Date(y, m+1, 0).getDate(); }
 function escapeAttr(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 
@@ -73,13 +83,43 @@ function arcPath(cx, cy, r0, r1, a0, a1) {
 async function loadHabits() {
   try {
     const r = await window.storage.get(HABITS_KEY);
-    if (r && r.value) { const p = JSON.parse(r.value); if (Array.isArray(p) && p.length >= MIN_HABITS) state.habits = p; }
+    if (r?.value) {
+      const p = JSON.parse(r.value);
+      if (Array.isArray(p) && p.length >= MIN_HABITS && p[0]?.id) { state.habits = p; return; }
+    }
+    // Migrate from v6 (string array → {id,name}[])
+    const old = await window.storage.get(HABITS_KEY_OLD);
+    if (old?.value) {
+      const arr = JSON.parse(old.value);
+      if (Array.isArray(arr)) {
+        state.habits = arr.map((name, i) => ({ id: 'h' + (i+1), name: String(name) }));
+        await saveHabits();
+      }
+    }
   } catch(e) {}
 }
 async function saveHabits() { try { await window.storage.set(HABITS_KEY, JSON.stringify(state.habits)); } catch(e) {} }
 async function loadMonth() {
-  try { const r = await window.storage.get(dataKey(state.year, state.month)); state.data = r && r.value ? JSON.parse(r.value) : {}; }
-  catch(e) { state.data = {}; }
+  try {
+    const r = await window.storage.get(dataKey(state.year, state.month));
+    if (r?.value) { state.data = JSON.parse(r.value); return; }
+    // Migrate from v4 (index keys → id keys)
+    const old = await window.storage.get(dataKeyOld(state.year, state.month));
+    if (old?.value) {
+      const oldData = JSON.parse(old.value);
+      const newData = {};
+      for (const day in oldData) {
+        newData[day] = {};
+        for (const idx in oldData[day]) {
+          const h = state.habits[parseInt(idx, 10)];
+          if (h) newData[day][h.id] = { v: oldData[day][idx] };
+        }
+        if (!Object.keys(newData[day]).length) delete newData[day];
+      }
+      state.data = newData;
+      await saveMonth();
+    } else { state.data = {}; }
+  } catch(e) { state.data = {}; }
 }
 async function saveMonth() { try { await window.storage.set(dataKey(state.year, state.month), JSON.stringify(state.data)); } catch(e) {} }
 
@@ -112,7 +152,8 @@ function render() {
       const bandIdx = bandCount - 1 - h;
       const r0 = INNER_R + bandIdx * bandW, r1 = INNER_R + (bandIdx+1) * bandW;
       const path = arcPath(CENTER, CENTER, r0, r1, a0, a1);
-      const val = (state.data[d] && state.data[d][h]) || 0;
+      const habitId = state.habits[h].id;
+      const val = getVal(d, habitId);
       const isFuture = isFutureMonth || (isCurrentMonth && d > todayDay);
       const isToday = isCurrentMonth && d === todayDay;
       let cls = 'cell ';
@@ -121,7 +162,7 @@ function render() {
       else if (val === 2) cls += 'cell-fail';
       else if (isToday) cls += 'cell-fail';
       else cls += isWeekend ? 'cell-empty-weekend' : 'cell-empty';
-      svg += `<path class="${cls}" d="${path}" data-cell="${d}-${h}" data-day="${d}" data-habit="${h}" />`;
+      svg += `<path class="${cls}" d="${path}" data-cell="${d}-${habitId}" data-day="${d}" data-habit="${habitId}" />`;
     }
     const labelR = OUTER_R + 16, aMid = (a0+a1)/2;
     const lx = CENTER + labelR * Math.cos(aMid), ly = CENTER + labelR * Math.sin(aMid) + 3.5;
@@ -131,7 +172,7 @@ function render() {
 
   let doneCount = 0, totalPossible = 0;
   const maxDay = isCurrentMonth ? todayDay : (isFutureMonth ? 0 : days);
-  for (let d = 1; d <= maxDay; d++) for (let h = 0; h < bandCount; h++) { totalPossible++; if (state.data[d] && state.data[d][h] === 1) doneCount++; }
+  for (let d = 1; d <= maxDay; d++) for (let h = 0; h < bandCount; h++) { totalPossible++; if (getVal(d, state.habits[h].id) === 1) doneCount++; }
   const pct = totalPossible > 0 ? Math.round(doneCount / totalPossible * 100) : 0;
 
   let habitsHtml = '<div class="habits-list">';
@@ -139,7 +180,7 @@ function render() {
     const bandIdx = bandCount - 1 - i;
     const bottomRadius = INNER_R + bandIdx * bandW;
     const topPct = ((CENTER - bottomRadius) / SVG_SIZE) * 100;
-    habitsHtml += `<div class="habit-line" style="top:${topPct}%"><div class="habit-line-inner"><span class="habit-num">${i+1}.</span><input class="habit-name" data-habit="${i}" value="${escapeAttr(state.habits[i])}" placeholder="—" /></div></div>`;
+    habitsHtml += `<div class="habit-line" style="top:${topPct}%"><div class="habit-line-inner"><span class="habit-num">${i+1}.</span><input class="habit-name" data-habit="${state.habits[i].id}" value="${escapeAttr(state.habits[i].name)}" placeholder="—" /></div></div>`;
   }
   habitsHtml += '</div>';
 
@@ -149,35 +190,35 @@ function render() {
 
   app.querySelectorAll('.cell').forEach(el => {
     if (el.classList.contains('cell-future') || el.classList.contains('cell-future-weekend')) return;
-    el.addEventListener('click', () => cycleCell(parseInt(el.dataset.day,10), parseInt(el.dataset.habit,10)));
+    el.addEventListener('click', () => cycleCell(parseInt(el.dataset.day,10), el.dataset.habit));
   });
   app.querySelectorAll('.habit-name').forEach(inp => {
-    inp.addEventListener('change', e => { state.habits[parseInt(e.target.dataset.habit,10)] = e.target.value.trim(); saveHabits(); });
+    inp.addEventListener('change', e => {
+      const h = state.habits.find(h => h.id === e.target.dataset.habit);
+      if (h) { h.name = e.target.value.trim(); saveHabits(); }
+    });
   });
 }
 
-function cycleCell(day, habit) {
-  if (!state.data[day]) state.data[day] = {};
-  const cur = state.data[day][habit] || 0;
-  state.data[day][habit] = (cur + 1) % 3;
-  if (state.data[day][habit] === 0) delete state.data[day][habit];
-  if (Object.keys(state.data[day] || {}).length === 0) delete state.data[day];
+function cycleCell(day, habitId) {
+  const cur = getVal(day, habitId);
+  setVal(day, habitId, (cur + 1) % 3);
   saveMonth(); render();
   requestAnimationFrame(() => {
-    const el = document.querySelector(`[data-cell="${day}-${habit}"]`);
+    const el = document.querySelector(`[data-cell="${day}-${habitId}"]`);
     if (el) { el.classList.add('popping'); setTimeout(() => el.classList.remove('popping'), 230); }
   });
 }
 
 function renderEditList() {
   editList.innerHTML = '';
-  state.editBuffer.forEach((name, i) => {
+  state.editBuffer.forEach((h, i) => {
     const row = document.createElement('div');
     row.className = 'edit-row';
-    row.innerHTML = `<span class="n">${i+1}.</span><input type="text" value="${escapeAttr(name)}" placeholder="Nom de l'habitude" data-idx="${i}" /><button class="del" data-idx="${i}" ${state.editBuffer.length <= MIN_HABITS ? 'disabled' : ''}>×</button>`;
+    row.innerHTML = `<span class="n">${i+1}.</span><input type="text" value="${escapeAttr(h.name)}" placeholder="Nom de l'habitude" data-idx="${i}" /><button class="del" data-idx="${i}" ${state.editBuffer.length <= MIN_HABITS ? 'disabled' : ''}>×</button>`;
     editList.appendChild(row);
   });
-  editList.querySelectorAll('input').forEach(inp => inp.addEventListener('input', e => { state.editBuffer[parseInt(e.target.dataset.idx,10)] = e.target.value; }));
+  editList.querySelectorAll('input').forEach(inp => inp.addEventListener('input', e => { state.editBuffer[parseInt(e.target.dataset.idx,10)].name = e.target.value; }));
   editList.querySelectorAll('.del').forEach(btn => btn.addEventListener('click', e => {
     const i = parseInt(e.currentTarget.dataset.idx,10);
     if (state.editBuffer.length > MIN_HABITS) { state.editBuffer.splice(i,1); renderEditList(); }
@@ -185,15 +226,17 @@ function renderEditList() {
   document.getElementById('addHabit').disabled = state.editBuffer.length >= MAX_HABITS;
 }
 
-function openSettings() { state.editBuffer = [...state.habits]; renderEditList(); modalBackdrop.classList.add('open'); }
+function openSettings() { state.editBuffer = state.habits.map(h => ({ ...h })); renderEditList(); modalBackdrop.classList.add('open'); }
 function closeSettings() { modalBackdrop.classList.remove('open'); }
 async function saveSettings() {
-  const newHabits = state.editBuffer.map(s => s.trim());
+  const newHabits = state.editBuffer.map(h => ({ id: h.id, name: h.name.trim() })).filter(h => h.name);
   if (newHabits.length < MIN_HABITS) return;
-  if (newHabits.length < state.habits.length) {
-    for (const d in state.data) {
-      for (const h in state.data[d]) { if (parseInt(h,10) >= newHabits.length) delete state.data[d][h]; }
-      if (Object.keys(state.data[d]).length === 0) delete state.data[d];
+  const newIds = new Set(newHabits.map(h => h.id));
+  const deletedIds = state.habits.map(h => h.id).filter(id => !newIds.has(id));
+  if (deletedIds.length) {
+    for (const day in state.data) {
+      deletedIds.forEach(id => delete state.data[day][id]);
+      if (!Object.keys(state.data[day]).length) delete state.data[day];
     }
     await saveMonth();
   }
@@ -204,7 +247,7 @@ document.getElementById('openSettings').addEventListener('click', openSettings);
 document.getElementById('modalClose').addEventListener('click', closeSettings);
 document.getElementById('cancelEdit').addEventListener('click', closeSettings);
 document.getElementById('saveEdit').addEventListener('click', saveSettings);
-document.getElementById('addHabit').addEventListener('click', () => { if (state.editBuffer.length < MAX_HABITS) { state.editBuffer.push(''); renderEditList(); } });
+document.getElementById('addHabit').addEventListener('click', () => { if (state.editBuffer.length < MAX_HABITS) { state.editBuffer.push({ id: genId(), name: '' }); renderEditList(); } });
 modalBackdrop.addEventListener('click', e => { if (e.target === modalBackdrop) closeSettings(); });
 
 document.querySelector('.topbar-menu').addEventListener('click', openReorder);
@@ -246,7 +289,7 @@ function renderCalendarGrid() {
   const isCurrentMonth = today.getFullYear() === state.year && today.getMonth() === state.month;
   const isFutureMonth = (state.year > today.getFullYear()) || (state.year === today.getFullYear() && state.month > today.getMonth());
   const todayDay = isCurrentMonth ? today.getDate() : -1;
-  const activeCount = state.habits.filter(h => h.trim()).length;
+  const activeCount = state.habits.filter(h => h.name.trim()).length;
 
   const firstDow = new Date(state.year, state.month, 1).getDay();
   const startOffset = firstDow === 0 ? 6 : firstDow - 1;
@@ -290,7 +333,7 @@ function renderCalendarGrid() {
 
     let doneCount = 0;
     if (!isFuture && activeCount > 0) {
-      doneCount = Object.values(state.data[d] || {}).filter(v => v === 1).length;
+      doneCount = Object.values(state.data[d] || {}).filter(e => (typeof e==='object'?e.v:e) === 1).length;
     }
     const pct = activeCount > 0 ? doneCount / activeCount : 0;
     const full = doneCount > 0 && pct >= 1;
@@ -336,7 +379,7 @@ function renderCalendarGrid() {
 function renderCalStats() {
   const statsEl = document.getElementById('calStats');
   if (!statsEl) return;
-  const activeCount = state.habits.filter(h => h.trim()).length;
+  const activeCount = state.habits.filter(h => h.name.trim()).length;
   if (!activeCount) { statsEl.innerHTML = ''; return; }
 
   const today = new Date();
@@ -349,7 +392,7 @@ function renderCalStats() {
   let run = 0, bestStreak = 0;
   for (let d = 1; d <= maxDay; d++) {
     const vals = Object.values(state.data[d] || {});
-    const dn = vals.filter(v => v === 1).length;
+    const dn = vals.filter(e => (typeof e==='object'?e.v:e) === 1).length;
     doneHabits += dn; totalPossible += activeCount;
     if (dn >= activeCount) doneDays++;
     if (dn >= activeCount) { run++; bestStreak = Math.max(bestStreak, run); }
@@ -403,13 +446,13 @@ function switchToTodayForDate(date) {
 
 function calcStreak() {
   const today = new Date();
-  const activeCount = state.habits.filter(h => h.trim()).length;
+  const activeCount = state.habits.filter(h => h.name.trim()).length;
   if (!activeCount) return 0;
   const todayDay = today.getDate();
-  const todayDone = Object.values(state.data[todayDay] || {}).filter(v => v === 1).length >= activeCount;
+  const todayDone = Object.values(state.data[todayDay] || {}).filter(e => (typeof e==='object'?e.v:e) === 1).length >= activeCount;
   let streak = 0;
   for (let d = todayDone ? todayDay : todayDay - 1; d >= 1; d--) {
-    if (Object.values(state.data[d] || {}).filter(v => v === 1).length >= activeCount) streak++;
+    if (Object.values(state.data[d] || {}).filter(e => (typeof e==='object'?e.v:e) === 1).length >= activeCount) streak++;
     else break;
   }
   return streak;
@@ -422,7 +465,7 @@ function renderWeekStrip() {
   const today = new Date();
   const monday = getWeekMonday(weekOffset);
   const DAY_LABELS = ['L','M','M','J','V','S','D'];
-  const activeCount = state.habits.filter(h => h.trim()).length;
+  const activeCount = state.habits.filter(h => h.name.trim()).length;
   const R = 14, CIRC = +(2 * Math.PI * R).toFixed(2);
 
   const weekDates = Array.from({ length: 7 }, (_, i) => {
@@ -440,7 +483,7 @@ function renderWeekStrip() {
 
     let doneCount = 0;
     if (inLoadedMonth && activeCount > 0) {
-      doneCount = Object.values(state.data[dayNum] || {}).filter(v => v === 1).length;
+      doneCount = Object.values(state.data[dayNum] || {}).filter(e => (typeof e==='object'?e.v:e) === 1).length;
     }
     const pct = activeCount > 0 ? doneCount / activeCount : 0;
     const full = pct === 1;
@@ -483,7 +526,7 @@ function renderWeekStrip() {
 
   let streakSinceHtml = '';
   if (streak > 0 && state.year === today.getFullYear() && state.month === today.getMonth()) {
-    const todayDone = Object.values(state.data[today.getDate()] || {}).filter(v => v === 1).length >= activeCount;
+    const todayDone = Object.values(state.data[today.getDate()] || {}).filter(e => (typeof e==='object'?e.v:e) === 1).length >= activeCount;
     const startD = new Date(today);
     startD.setDate(today.getDate() - (todayDone ? streak - 1 : streak));
     streakSinceHtml = `<span class="s-streak-since">depuis le ${startD.getDate()} ${MONTHS_SHORT_FR[startD.getMonth()]}</span>`;
@@ -619,10 +662,9 @@ function getHabitVisual(name, index) {
 async function validateAllHabits(day) {
   const dataAvailable = selectedDate.getFullYear() === state.year && selectedDate.getMonth() === state.month;
   if (!dataAvailable) return;
+  const at = todayStr();
   if (!state.data[day]) state.data[day] = {};
-  state.habits.forEach((name, i) => {
-    if (name.trim()) state.data[day][i] = 1;
-  });
+  state.habits.forEach(h => { if (h.name.trim()) state.data[day][h.id] = { v: 1, at }; });
   await saveMonth();
   renderTodayHabits();
   renderWeekStrip();
@@ -638,7 +680,7 @@ function renderTodayHabits() {
   const selDay = selectedDate.getDate();
   const dataAvailable = selectedDate.getFullYear() === state.year && selectedDate.getMonth() === state.month;
 
-  const activeHabits = state.habits.map((name, i) => ({ name, i })).filter(h => h.name.trim());
+  const activeHabits = state.habits.filter(h => h.name.trim());
 
   if (!activeHabits.length) {
     pendingSection.innerHTML = '<div class="habit-card" style="justify-content:center;color:#8e8e93;font-size:15px;text-align:center;">Aucune habitude.<br>Appuie sur + pour commencer.</div>';
@@ -654,21 +696,21 @@ function renderTodayHabits() {
   const selNorm = new Date(selectedDate); selNorm.setHours(0,0,0,0);
   const isPastDay = dataAvailable && selNorm < todayNorm;
 
-  activeHabits.forEach(h => {
-    const val = dataAvailable && state.data[selDay] ? (state.data[selDay][h.i] || 0) : 0;
+  activeHabits.forEach((h, hi) => {
+    const val = dataAvailable ? getVal(selDay, h.id) : 0;
     const isDone = val === 1;
     const isMissed = isPastDay && !isDone;
-    const v = getHabitVisual(h.name, h.i);
+    const v = getHabitVisual(h.name, hi);
     const c = PILLAR_COLORS[v.pillar];
     const pillLabel = v.pillar === 'body' ? 'Body' : v.pillar === 'mind' ? 'Mind' : 'Spirit';
     const iconBg = isMissed ? '#fff0f0' : c.bg;
-    const card = `<div class="habit-card${isDone ? ' done-card' : ''}" data-habit="${h.i}" data-day="${selDay}">
+    const card = `<div class="habit-card${isDone ? ' done-card' : ''}" data-habit="${h.id}" data-day="${selDay}">
       <div class="habit-card-icon" style="background:${iconBg}">${v.emoji}</div>
       <div class="habit-card-body">
         <div class="habit-card-name${isDone ? ' done-name' : isMissed ? ' missed-name' : ''}">${escapeAttr(h.name)}</div>
         <div class="habit-card-meta"><span class="pillar-tag pillar-${v.pillar}">${pillLabel}</span></div>
       </div>
-      <button class="habit-card-btn${isDone ? ' done-btn' : isMissed ? ' missed-btn' : ''}" data-habit="${h.i}">${isDone ? '✓' : isMissed ? '✗' : ''}</button>
+      <button class="habit-card-btn${isDone ? ' done-btn' : isMissed ? ' missed-btn' : ''}" data-habit="${h.id}">${isDone ? '✓' : isMissed ? '✗' : ''}</button>
     </div>`;
     if (isDone) doneHtml += card;
     else pendingHtml += card;
@@ -695,24 +737,20 @@ function renderTodayHabits() {
       e.preventDefault();
       e.stopPropagation();
       const card = btn.closest('.habit-card');
-      const habitIdx = parseInt(btn.dataset.habit, 10);
+      const habitId = btn.dataset.habit;
       btn.classList.add('animating');
       setTimeout(() => {
         // FLIP: record current position before re-render
         const firstRect = card ? card.getBoundingClientRect() : null;
-        if (!state.data[selDay]) state.data[selDay] = {};
-        const cur = state.data[selDay][habitIdx] || 0;
-        const next = cur === 1 ? 0 : 1;
-        if (next === 0) delete state.data[selDay][habitIdx];
-        else state.data[selDay][habitIdx] = next;
-        if (Object.keys(state.data[selDay] || {}).length === 0) delete state.data[selDay];
+        const cur = getVal(selDay, habitId);
+        setVal(selDay, habitId, cur === 1 ? 0 : 1);
         saveMonth();
         renderTodayHabits();
         renderWeekStrip();
         // FLIP: animate card from old position to new position
         if (firstRect) {
           requestAnimationFrame(() => {
-            const newCard = document.querySelector(`.habit-card[data-habit="${habitIdx}"]`);
+            const newCard = document.querySelector(`.habit-card[data-habit="${habitId}"]`);
             if (!newCard) return;
             const lastRect = newCard.getBoundingClientRect();
             const dy = firstRect.top - lastRect.top;
@@ -732,9 +770,7 @@ function renderTodayHabits() {
 // ── Reorder ───────────────────────────────────────────────────────────────────
 
 function openReorder() {
-  reorderBuffer = state.habits
-    .map((name, i) => ({ name, origIdx: i }))
-    .filter(h => h.name.trim());
+  reorderBuffer = state.habits.filter(h => h.name.trim()).map(h => ({ ...h }));
   if (!reorderBuffer.length) return;
   renderReorderList();
   document.getElementById('reorderBackdrop').classList.add('open');
@@ -747,7 +783,7 @@ function closeReorder() {
 function renderReorderList() {
   const container = document.getElementById('reorderList');
   container.innerHTML = reorderBuffer.map((h, i) => {
-    const v = getHabitVisual(h.name, h.origIdx);
+    const v = getHabitVisual(h.name, i);
     const c = PILLAR_COLORS[v.pillar];
     return `<div class="reorder-item" data-ri="${i}">
       <span class="reorder-handle">⠿</span>
@@ -803,28 +839,10 @@ function setupReorderDrag(container) {
 }
 
 async function saveReorder() {
-  const activeCount = reorderBuffer.length;
-  const empties = state.habits.filter(h => !h.trim());
-  const newHabits = [...reorderBuffer.map(h => h.name), ...empties];
-
-  const oldToNew = {};
-  reorderBuffer.forEach((h, newIdx) => { oldToNew[h.origIdx] = newIdx; });
-  let ei = activeCount;
-  state.habits.forEach((name, oldIdx) => { if (!name.trim()) oldToNew[oldIdx] = ei++; });
-
-  for (const day in state.data) {
-    const old = { ...state.data[day] };
-    state.data[day] = {};
-    for (const k in old) {
-      const ni = oldToNew[parseInt(k, 10)];
-      if (ni !== undefined) state.data[day][ni] = old[k];
-    }
-    if (!Object.keys(state.data[day]).length) delete state.data[day];
-  }
-
-  state.habits = newHabits;
+  // IDs are stable — no data remapping needed
+  const empties = state.habits.filter(h => !h.name.trim());
+  state.habits = [...reorderBuffer, ...empties];
   await saveHabits();
-  await saveMonth();
   render(); renderCalendarGrid(); renderTodayHabits(); renderWeekStrip();
   closeReorder();
 }
@@ -940,11 +958,13 @@ async function syncDailyLegumes() {
   const cw = getISOWeek(today);
   if (fruitState.year !== cw.year || fruitState.week !== cw.week) return;
 
-  const habitIdx = state.habits.findIndex(h => /légume/i.test(h));
-  if (habitIdx < 0) return;
+  const habitObj = state.habits.find(h => /légume/i.test(h.name));
+  if (!habitObj) return;
+  const hid = habitObj.id;
 
   const todayYear = today.getFullYear(), todayMonth = today.getMonth(), todayDay = today.getDate();
   const count = fruitState.items.length;
+  const at = todayStr();
 
   const onCurrentMonth = state.year === todayYear && state.month === todayMonth;
   let monthData;
@@ -961,15 +981,15 @@ async function syncDailyLegumes() {
       const d = new Date(monday); d.setDate(monday.getDate() + i);
       if (d.getFullYear() === todayYear && d.getMonth() === todayMonth && d.getDate() <= todayDay) {
         if (!monthData[d.getDate()]) monthData[d.getDate()] = {};
-        monthData[d.getDate()][habitIdx] = 1;
+        monthData[d.getDate()][hid] = { v: 1, at };
       }
     }
   } else if (count > 0) {
     if (!monthData[todayDay]) monthData[todayDay] = {};
-    monthData[todayDay][habitIdx] = 1;
+    monthData[todayDay][hid] = { v: 1, at };
   } else {
     if (monthData[todayDay]) {
-      delete monthData[todayDay][habitIdx];
+      delete monthData[todayDay][hid];
       if (!Object.keys(monthData[todayDay]).length) delete monthData[todayDay];
     }
   }
