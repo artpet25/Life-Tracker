@@ -19,7 +19,7 @@ window.storage = {
       _supa.from('user_storage')
         .upsert({ user_id: _user.id, key, value, updated_at: new Date().toISOString() },
                 { onConflict: 'user_id,key' })
-        .catch(() => {});
+        .then(({ error }) => { if (error) console.error('[Supabase] write error:', error.message); });
     }
   }
 };
@@ -45,17 +45,21 @@ async function pullSupabaseToLocal(userId) {
 
 async function onLogin(user) {
   _user = user;
-  const localHasData = Object.keys(localStorage).some(k => k.startsWith('habits:') || k.startsWith('fruits:'));
-  const { data: supaRows } = await _supa.from('user_storage').select('key').eq('user_id', user.id).limit(1).catch(() => ({ data: null }));
-  const supaHasData = supaRows?.length > 0;
 
-  if (localHasData && !supaHasData) {
-    await pushLocalToSupabase(user.id); // new account, upload local data
-  } else if (!localHasData && supaHasData) {
-    await pullSupabaseToLocal(user.id); // new device, pull from Supabase
-    if (window.reloadAppData) await window.reloadAppData();
-  } else if (localHasData && supaHasData) {
-    await pushLocalToSupabase(user.id); // merge: local wins for existing keys
+  const localKeys = Object.keys(localStorage).filter(k => k.startsWith('habits:') || k.startsWith('fruits:'));
+
+  if (localKeys.length > 0) {
+    // Push all local data to Supabase (local wins)
+    const rows = localKeys.map(key => ({
+      user_id: user.id, key, value: localStorage.getItem(key),
+      updated_at: new Date().toISOString()
+    }));
+    const { error } = await _supa.from('user_storage').upsert(rows, { onConflict: 'user_id,key' });
+    if (error) console.error('[Supabase] push error:', error.message);
+  } else {
+    // No local data → pull from Supabase
+    const pulled = await pullSupabaseToLocal(user.id);
+    if (pulled && window.reloadAppData) await window.reloadAppData();
   }
 
   document.getElementById('authOverlay')?.style.setProperty('display', 'none');
