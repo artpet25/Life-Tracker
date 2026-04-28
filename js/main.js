@@ -676,9 +676,8 @@ function renderTodayHabits() {
 
   const hasPending = pendingHtml.length > 0;
 
-  const isToday = selectedDate.toDateString() === new Date().toDateString();
   if (topbarValidateBtn) {
-    if (dataAvailable && isToday) {
+    if (dataAvailable) {
       topbarValidateBtn.style.display = 'flex';
       topbarValidateBtn.style.opacity = '1';
       topbarValidateBtn.dataset.day = selDay;
