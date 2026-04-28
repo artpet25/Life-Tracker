@@ -114,10 +114,12 @@ function render() {
       const path = arcPath(CENTER, CENTER, r0, r1, a0, a1);
       const val = (state.data[d] && state.data[d][h]) || 0;
       const isFuture = isFutureMonth || (isCurrentMonth && d > todayDay);
+      const isToday = isCurrentMonth && d === todayDay;
       let cls = 'cell ';
       if (isFuture) cls += isWeekend ? 'cell-future-weekend' : 'cell-future';
       else if (val === 1) cls += 'cell-done';
       else if (val === 2) cls += 'cell-fail';
+      else if (isToday) cls += 'cell-fail';
       else cls += isWeekend ? 'cell-empty-weekend' : 'cell-empty';
       svg += `<path class="${cls}" d="${path}" data-cell="${d}-${h}" data-day="${d}" data-habit="${h}" />`;
     }
@@ -678,7 +680,7 @@ function renderTodayHabits() {
   if (topbarValidateBtn) {
     if (dataAvailable && isToday) {
       topbarValidateBtn.style.display = 'flex';
-      topbarValidateBtn.style.opacity = hasPending ? '1' : '0.3';
+      topbarValidateBtn.style.opacity = '1';
       topbarValidateBtn.dataset.day = selDay;
     } else {
       topbarValidateBtn.style.display = 'none';
@@ -866,7 +868,7 @@ document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => btn.addEventListe
 
 // ── Fruits ─────────────────────────────────────────────────────────────────────
 
-const FRUIT_GOAL = 30;
+const FRUIT_GOAL = 20;
 const EMOJI_MAP = {
   'pomme':{e:'🍎',t:'f',s:[1,2,3,4,9,10,11,12]},'poire':{e:'🍐',t:'f',s:[1,2,3,8,9,10,11,12]},'orange':{e:'🍊',t:'f',s:[1,2,3,4,11,12]},'citron':{e:'🍋',t:'f',s:[1,2,3,4,5,10,11,12]},'banane':{e:'🍌',t:'f',s:[1,2,3,4,5,6,7,8,9,10,11,12]},'pasteque':{e:'🍉',t:'f',s:[6,7,8,9]},'raisin':{e:'🍇',t:'f',s:[8,9,10,11]},'fraise':{e:'🍓',t:'f',s:[4,5,6,7]},'myrtille':{e:'🫐',t:'f',s:[7,8,9]},'melon':{e:'🍈',t:'f',s:[6,7,8,9]},'cerise':{e:'🍒',t:'f',s:[5,6,7]},'peche':{e:'🍑',t:'f',s:[6,7,8,9]},'mangue':{e:'🥭',t:'f',s:[1,2,3,4,5,12]},'ananas':{e:'🍍',t:'f',s:[1,2,3,4,5,6,7,8,9,10,11,12]},'kiwi':{e:'🥝',t:'f',s:[1,2,3,4,5,10,11,12]},'avocat':{e:'🥑',t:'f',s:[1,2,3,4,5,10,11,12]},'framboise':{e:'🫐',t:'f',s:[6,7,8,9]},'abricot':{e:'🍑',t:'f',s:[6,7,8]},'figue':{e:'🍇',t:'f',s:[7,8,9,10]},'prune':{e:'🍑',t:'f',s:[7,8,9,10]},'clementine':{e:'🍊',t:'f',s:[10,11,12,1,2]},'mandarine':{e:'🍊',t:'f',s:[11,12,1,2]},'nectarine':{e:'🍑',t:'f',s:[6,7,8,9]},'tomate':{e:'🍅',t:'v',s:[6,7,8,9,10]},'aubergine':{e:'🍆',t:'v',s:[6,7,8,9,10]},'carotte':{e:'🥕',t:'v',s:[1,2,3,4,5,6,7,8,9,10,11,12]},'mais':{e:'🌽',t:'v',s:[7,8,9,10]},'poivron':{e:'🫑',t:'v',s:[6,7,8,9,10]},'concombre':{e:'🥒',t:'v',s:[5,6,7,8,9]},'brocoli':{e:'🥦',t:'v',s:[6,7,8,9,10,11]},'salade':{e:'🥬',t:'v',s:[1,2,3,4,5,6,7,8,9,10,11,12]},'epinard':{e:'🥬',t:'v',s:[3,4,5,6,9,10,11]},'chou':{e:'🥬',t:'v',s:[1,2,3,9,10,11,12]},'ail':{e:'🧄',t:'v',s:[1,2,3,4,5,6,7,8,9,10,11,12]},'oignon':{e:'🧅',t:'v',s:[1,2,3,4,5,6,7,8,9,10,11,12]},'champignon':{e:'🍄',t:'v',s:[9,10,11,12,1]},'courgette':{e:'🥒',t:'v',s:[5,6,7,8,9,10]},'asperge':{e:'🌱',t:'v',s:[4,5,6]},'haricot vert':{e:'🫛',t:'v',s:[6,7,8,9]},'petit pois':{e:'🫛',t:'v',s:[5,6,7]},'betterave':{e:'🥕',t:'v',s:[1,2,3,6,7,8,9,10,11,12]},'radis':{e:'🥕',t:'v',s:[3,4,5,6,7,8,9]},'poireau':{e:'🥬',t:'v',s:[1,2,3,4,9,10,11,12]},'courge':{e:'🎃',t:'v',s:[9,10,11,12]},'potiron':{e:'🎃',t:'v',s:[9,10,11,12]},'patate douce':{e:'🍠',t:'v',s:[9,10,11,12,1]},'pomme de terre':{e:'🥔',t:'v',s:[1,2,3,4,5,6,7,8,9,10,11,12]},'endive':{e:'🥬',t:'v',s:[1,2,3,10,11,12]},'chou-fleur':{e:'🥦',t:'v',s:[1,2,3,4,9,10,11,12]},'fenouil':{e:'🥬',t:'v',s:[6,7,8,9,10]},'celeri':{e:'🥬',t:'v',s:[1,2,8,9,10,11,12]},'navet':{e:'🥔',t:'v',s:[1,2,3,4,9,10,11,12]},'artichaut':{e:'🌱',t:'v',s:[5,6,7,8,9]},'lentille':{e:'🫘',t:'v',s:[1,2,3,4,5,6,7,8,9,10,11,12]},'patate':{e:'🥔',t:'v',s:[1,2,3,4,5,6,7,8,9,10,11,12]}
 };
@@ -943,7 +945,7 @@ async function syncDailyLegumes() {
   if (habitIdx < 0) return;
 
   const todayYear = today.getFullYear(), todayMonth = today.getMonth(), todayDay = today.getDate();
-  const count = fruitState.items.reduce((s, it) => s + (it.qty || 1), 0);
+  const count = fruitState.items.length;
 
   const onCurrentMonth = state.year === todayYear && state.month === todayMonth;
   let monthData;
@@ -954,7 +956,7 @@ async function syncDailyLegumes() {
     catch(e) { monthData = {}; }
   }
 
-  if (count >= 30) {
+  if (count >= 20) {
     const monday = getWeekMonday(0);
     for (let i = 0; i < 7; i++) {
       const d = new Date(monday); d.setDate(monday.getDate() + i);
@@ -1006,15 +1008,15 @@ function renderFruits() {
   fruitState.items.forEach(it=>{if(!it.type)it.type=guessItem(it.name).t;if(!it.season)it.season=guessItem(it.name).s||[];});
   renderSeasonStrip();
   const mo=currentMonth();
-  const totalQty=fruitState.items.reduce((s,it)=>s+(it.qty||1),0);
-  const fruitsQty=fruitState.items.filter(it=>it.type!=='v').reduce((s,it)=>s+(it.qty||1),0);
-  const veggiesQty=fruitState.items.filter(it=>it.type==='v').reduce((s,it)=>s+(it.qty||1),0);
-  document.getElementById('fruitsCount').textContent=totalQty;
-  document.getElementById('fruitsOnlyCount').textContent=fruitsQty;
-  document.getElementById('veggiesCount').textContent=veggiesQty;
-  const pct=Math.min(100,(totalQty/FRUIT_GOAL)*100);
+  const distinctCount=fruitState.items.length;
+  const fruitsOnly=fruitState.items.filter(it=>it.type!=='v').length;
+  const veggiesOnly=fruitState.items.filter(it=>it.type==='v').length;
+  document.getElementById('fruitsCount').textContent=distinctCount;
+  document.getElementById('fruitsOnlyCount').textContent=fruitsOnly;
+  document.getElementById('veggiesCount').textContent=veggiesOnly;
+  const pct=Math.min(100,(distinctCount/FRUIT_GOAL)*100);
   document.getElementById('progressFill').style.width=pct+'%';
-  document.getElementById('progressFill').style.background=totalQty>=FRUIT_GOAL?'#34c759':'#5856d6';
+  document.getElementById('progressFill').style.background=distinctCount>=FRUIT_GOAL?'#34c759':'#5856d6';
   const list=document.getElementById('fruitsList');
   if(!fruitState.items.length){list.innerHTML='<div class="fruits-empty">Aucun fruit ou légume cette semaine.<br>Commence par en ajouter un ci-dessus.</div>';return;}
   const fruitsArr=[],veggiesArr=[];
