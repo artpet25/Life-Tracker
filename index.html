@@ -11,6 +11,7 @@
 <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
 <link rel="manifest" href="manifest.json">
 <title>Life Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="js/app.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
@@ -251,6 +252,17 @@
   .stat-card-icon { font-size: 22px; }
   .stat-card-label { font-size: 10px; font-weight: 700; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 8px; }
 
+  /* Auth overlay */
+  #authOverlay { position: fixed; inset: 0; background: white; z-index: 20000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 40px 32px; }
+  .auth-wordmark { font-size: 46px; font-weight: 900; letter-spacing: 0.4em; padding-left: 0.4em; color: #1c1c1e; margin-bottom: 10px; }
+  .auth-subtitle { font-size: 15px; color: #8e8e93; margin-bottom: 36px; text-align: center; line-height: 1.5; }
+  #authEmail { width: 100%; padding: 14px 16px; font-size: 16px; border: 1.5px solid #e5e5ea; border-radius: 14px; outline: none; color: #1c1c1e; margin-bottom: 10px; font-family: inherit; }
+  #authEmail:focus { border-color: #5856d6; }
+  #authSendBtn { width: 100%; padding: 14px; background: #5856d6; color: white; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; margin-bottom: 14px; font-family: inherit; }
+  #authSendBtn:active { opacity: 0.85; }
+  #authSentMsg { background: #f0fdf4; color: #166534; padding: 14px 16px; border-radius: 14px; font-size: 14px; text-align: center; display: none; margin-bottom: 14px; width: 100%; line-height: 1.5; }
+  #authSkipBtn { background: none; border: none; color: #8e8e93; font-size: 14px; cursor: pointer; text-decoration: underline; font-family: inherit; }
+
   /* Piliers overlay */
   #piliersOverlay { position: fixed; inset: 0; background: #f0ece3; z-index: 200; display: none; flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .piliers-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 0; padding-top: max(env(safe-area-inset-top, 0px), 16px); }
@@ -262,6 +274,16 @@
 <body>
 <div id="splash" style="position:fixed;inset:0;background:white;display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity 0.45s ease;">
   <span style="font-size:46px;font-weight:900;letter-spacing:0.4em;padding-left:0.4em;color:#1c1c1e;font-family:-apple-system,sans-serif">LIFE</span>
+</div>
+
+<!-- Auth overlay -->
+<div id="authOverlay">
+  <div class="auth-wordmark">LIFE</div>
+  <div class="auth-subtitle">Connecte-toi pour synchroniser<br>tes données sur tous tes appareils.</div>
+  <input type="email" id="authEmail" placeholder="ton@email.com" autocomplete="email" />
+  <div id="authSentMsg">✉️ Vérifie tes emails — le lien est valable 1 heure.</div>
+  <button id="authSendBtn">Envoyer le lien magique</button>
+  <button id="authSkipBtn">Continuer sans compte</button>
 </div>
 <div class="wrap">
 
