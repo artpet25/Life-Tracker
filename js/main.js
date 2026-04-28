@@ -1057,6 +1057,12 @@ document.getElementById('nextWeek').addEventListener('click',async()=>{
 
 // ── Init ───────────────────────────────────────────────────────────────────────
 
+window.reloadAppData = async () => {
+  await loadHabits();
+  await loadMonth();
+  render(); renderCalendarGrid(); renderTodayHabits(); renderWeekStrip();
+};
+
 (async function init() {
   const splashStart = Date.now();
   await loadHabits();
