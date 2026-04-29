@@ -215,10 +215,17 @@ function renderEditList() {
   state.editBuffer.forEach((h, i) => {
     const row = document.createElement('div');
     row.className = 'edit-row';
-    row.innerHTML = `<span class="n">${i+1}.</span><input type="text" value="${escapeAttr(h.name)}" placeholder="Nom de l'habitude" data-idx="${i}" /><button class="del" data-idx="${i}" ${state.editBuffer.length <= MIN_HABITS ? 'disabled' : ''}>×</button>`;
+    const p = h.pillar || 'body';
+    row.innerHTML = `<span class="n">${i+1}.</span><input type="text" value="${escapeAttr(h.name)}" placeholder="Nom de l'habitude" data-idx="${i}" /><div class="pillar-select"><button class="ps-btn${p==='body'?' ps-active-body':''}" data-pillar="body" data-idx="${i}" title="Body">💪</button><button class="ps-btn${p==='mind'?' ps-active-mind':''}" data-pillar="mind" data-idx="${i}" title="Mind">🧠</button><button class="ps-btn${p==='spirit'?' ps-active-spirit':''}" data-pillar="spirit" data-idx="${i}" title="Spirit">🙏</button></div><button class="del" data-idx="${i}" ${state.editBuffer.length <= MIN_HABITS ? 'disabled' : ''}>×</button>`;
     editList.appendChild(row);
   });
   editList.querySelectorAll('input').forEach(inp => inp.addEventListener('input', e => { state.editBuffer[parseInt(e.target.dataset.idx,10)].name = e.target.value; }));
+  editList.querySelectorAll('.ps-btn').forEach(btn => btn.addEventListener('click', e => {
+    const idx = parseInt(e.currentTarget.dataset.idx, 10);
+    const pillar = e.currentTarget.dataset.pillar;
+    state.editBuffer[idx].pillar = pillar;
+    renderEditList();
+  }));
   editList.querySelectorAll('.del').forEach(btn => btn.addEventListener('click', e => {
     const i = parseInt(e.currentTarget.dataset.idx,10);
     if (state.editBuffer.length > MIN_HABITS) { state.editBuffer.splice(i,1); renderEditList(); }
@@ -229,7 +236,7 @@ function renderEditList() {
 function openSettings() { state.editBuffer = state.habits.map(h => ({ ...h })); renderEditList(); modalBackdrop.classList.add('open'); }
 function closeSettings() { modalBackdrop.classList.remove('open'); }
 async function saveSettings() {
-  const newHabits = state.editBuffer.map(h => ({ id: h.id, name: h.name.trim() })).filter(h => h.name);
+  const newHabits = state.editBuffer.map(h => ({ id: h.id, name: h.name.trim(), ...(h.pillar ? { pillar: h.pillar } : {}) })).filter(h => h.name);
   if (newHabits.length < MIN_HABITS) return;
   const newIds = new Set(newHabits.map(h => h.id));
   const deletedIds = state.habits.map(h => h.id).filter(id => !newIds.has(id));
@@ -616,38 +623,39 @@ function renderWeekStrip() {
 // ── Today view ────────────────────────────────────────────────────────────────
 
 const PILLAR_COLORS = {
-  body:   { bg: '#ffe5e5', color: '#d63030' },
+  body:   { bg: '#e5f0ff', color: '#1a6fd6' },
   mind:   { bg: '#f0ecff', color: '#7c5af2' },
   spirit: { bg: '#fff9d0', color: '#b07800' },
 };
 
-function getHabitVisual(name, index) {
+function getHabitVisual(name, index, pillarOverride) {
   const n = (name || '').toLowerCase();
-  if (/douche|shower/.test(n))                   return { pillar: 'body',   emoji: '🚿' };
-  if (/vitamine|vitamin|supplém/.test(n))        return { pillar: 'body',   emoji: '💊' };
-  if (/prière|priere|prayer/.test(n))            return { pillar: 'spirit', emoji: '🙏' };
-  if (/run|courir|jogg/.test(n))                  return { pillar: 'body',   emoji: '🏃' };
-  if (/jolt/.test(n))                             return { pillar: 'body',   emoji: '⚡' };
-  if (/étirement|etirement|stretch/.test(n))      return { pillar: 'body',   emoji: '🤸' };
-  if (/respir|breath/.test(n))                    return { pillar: 'body',   emoji: '🌬️' };
-  if (/sommeil|sleep|dorm|nuit/.test(n))          return { pillar: 'body',   emoji: '😴' };
-  if (/alimentation|manger|nutrit|repas/.test(n)) return { pillar: 'body',   emoji: '🥗' };
-  if (/fruit|légume/.test(n))                     return { pillar: 'body',   emoji: '🥗' };
-  if (/sexe|sex/.test(n))                         return { pillar: 'body',   emoji: '🔥' };
-  if (/exerc|sport|gym|muscl|fit/.test(n))        return { pillar: 'body',   emoji: '💪' };
-  if (/march|walk/.test(n))                       return { pillar: 'body',   emoji: '🚶' };
-  if (/eau|water|hydrat/.test(n))                 return { pillar: 'body',   emoji: '💧' };
-  if (/amour|love|couple|relation/.test(n))       return { pillar: 'mind',   emoji: '❤️' };
-  if (/travail|work|boulot|projet/.test(n))       return { pillar: 'mind',   emoji: '💼' };
-  if (/loisir|hobby|jeu|game/.test(n))            return { pillar: 'mind',   emoji: '🎮' };
-  if (/lire|lecture|read|livre|book/.test(n))     return { pillar: 'mind',   emoji: '📚' };
-  if (/créat|creat|art/.test(n))                  return { pillar: 'mind',   emoji: '🎨' };
-  if (/médit|meditat/.test(n))                    return { pillar: 'spirit', emoji: '🧘' };
-  if (/yoga/.test(n))                             return { pillar: 'spirit', emoji: '🧘' };
-  if (/bienveill|kindn/.test(n))                  return { pillar: 'spirit', emoji: '🌸' };
-  if (/inspir/.test(n))                           return { pillar: 'spirit', emoji: '✨' };
-  if (/famille|family/.test(n))                   return { pillar: 'spirit', emoji: '👨‍👩‍👧' };
-  if (/ami|friend|proch/.test(n))                 return { pillar: 'spirit', emoji: '👥' };
+  let emoji = null;
+  if (/douche|shower/.test(n))                   emoji = '🚿';
+  else if (/vitamine|vitamin|supplém/.test(n))   emoji = '💊';
+  else if (/prière|priere|prayer/.test(n))       emoji = '🙏';
+  else if (/run|courir|jogg/.test(n))            emoji = '🏃';
+  else if (/jolt/.test(n))                       emoji = '⚡';
+  else if (/étirement|etirement|stretch/.test(n)) emoji = '🤸';
+  else if (/respir|breath/.test(n))              emoji = '🌬️';
+  else if (/sommeil|sleep|dorm|nuit/.test(n))    emoji = '😴';
+  else if (/alimentation|manger|nutrit|repas/.test(n)) emoji = '🥗';
+  else if (/fruit|légume/.test(n))               emoji = '🥗';
+  else if (/sexe|sex/.test(n))                   emoji = '🔥';
+  else if (/exerc|sport|gym|muscl|fit/.test(n))  emoji = '💪';
+  else if (/march|walk/.test(n))                 emoji = '🚶';
+  else if (/eau|water|hydrat/.test(n))           emoji = '💧';
+  else if (/amour|love|couple|relation/.test(n)) emoji = '❤️';
+  else if (/travail|work|boulot|projet/.test(n)) emoji = '💼';
+  else if (/loisir|hobby|jeu|game/.test(n))      emoji = '🎮';
+  else if (/lire|lecture|read|livre|book/.test(n)) emoji = '📚';
+  else if (/créat|creat|art/.test(n))            emoji = '🎨';
+  else if (/médit|meditat/.test(n))              emoji = '🧘';
+  else if (/yoga/.test(n))                       emoji = '🧘';
+  else if (/bienveill|kindn/.test(n))            emoji = '🌸';
+  else if (/inspir/.test(n))                     emoji = '✨';
+  else if (/famille|family/.test(n))             emoji = '👨‍👩‍👧';
+  else if (/ami|friend|proch/.test(n))           emoji = '👥';
   const defaults = [
     { pillar: 'body',   emoji: '🎯' },
     { pillar: 'mind',   emoji: '⭐' },
@@ -656,7 +664,13 @@ function getHabitVisual(name, index) {
     { pillar: 'mind',   emoji: '💡' },
     { pillar: 'spirit', emoji: '🌈' },
   ];
-  return defaults[index % defaults.length];
+  const autoPillar = (() => {
+    if (/douche|shower|vitamine|vitamin|run|courir|jogg|jolt|étirement|etirement|stretch|respir|breath|sommeil|sleep|dorm|nuit|alimentation|manger|nutrit|repas|fruit|légume|sexe|sex|exerc|sport|gym|muscl|fit|march|walk|eau|water|hydrat/.test(n)) return 'body';
+    if (/amour|love|couple|relation|travail|work|boulot|projet|loisir|hobby|jeu|game|lire|lecture|read|livre|book|créat|creat|art/.test(n)) return 'mind';
+    if (/prière|priere|prayer|médit|meditat|yoga|bienveill|kindn|inspir|famille|family|ami|friend|proch/.test(n)) return 'spirit';
+    return defaults[index % defaults.length].pillar;
+  })();
+  return { pillar: pillarOverride || autoPillar, emoji: emoji || defaults[index % defaults.length].emoji };
 }
 
 async function validateAllHabits(day) {
@@ -700,7 +714,7 @@ function renderTodayHabits() {
     const val = dataAvailable ? getVal(selDay, h.id) : 0;
     const isDone = val === 1;
     const isMissed = isPastDay && !isDone;
-    const v = getHabitVisual(h.name, hi);
+    const v = getHabitVisual(h.name, hi, h.pillar);
     const c = PILLAR_COLORS[v.pillar];
     const pillLabel = v.pillar === 'body' ? 'Body' : v.pillar === 'mind' ? 'Mind' : 'Spirit';
     const iconBg = isMissed ? '#fff0f0' : c.bg;
@@ -783,7 +797,7 @@ function closeReorder() {
 function renderReorderList() {
   const container = document.getElementById('reorderList');
   container.innerHTML = reorderBuffer.map((h, i) => {
-    const v = getHabitVisual(h.name, i);
+    const v = getHabitVisual(h.name, i, h.pillar);
     const c = PILLAR_COLORS[v.pillar];
     return `<div class="reorder-item" data-ri="${i}">
       <span class="reorder-handle">⠿</span>

@@ -73,9 +73,15 @@
   .cal-cell:not(.blank):not(.future) { cursor: pointer; }
   .cal-cell.future { cursor: pointer; }
   .pillar-tag { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
-  .pillar-body { background: #ffe5e5; color: #d63030; }
+  .pillar-body { background: #e5f0ff; color: #1a6fd6; }
   .pillar-mind { background: #f0ecff; color: #7c5af2; }
   .pillar-spirit { background: #fff9d0; color: #b07800; }
+  .edit-row { display: grid; grid-template-columns: 22px 1fr auto 36px; align-items: center; gap: 8px; padding: 6px 0; }
+  .pillar-select { display: flex; gap: 3px; }
+  .ps-btn { width: 30px; height: 30px; border-radius: 8px; border: 2px solid transparent; background: #f2f2f7; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .ps-btn.ps-active-body { background: #e5f0ff; border-color: #1a6fd6; }
+  .ps-btn.ps-active-mind { background: #f0ecff; border-color: #7c5af2; }
+  .ps-btn.ps-active-spirit { background: #fff9d0; border-color: #b07800; }
 
   /* FAB */
   .fab { position: fixed; bottom: 96px; right: 20px; width: 58px; height: 58px; background: #5856d6; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; line-height: 1; box-shadow: 0 4px 20px rgba(88,86,214,0.45); border: none; cursor: pointer; z-index: 40; }
@@ -197,7 +203,6 @@
   .modal-close { background: #f2f2f7; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 18px; color: #8e8e93; display: flex; align-items: center; justify-content: center; }
   .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
   .modal-body .info { font-size: 14px; color: #8e8e93; margin-bottom: 14px; }
-  .edit-row { display: grid; grid-template-columns: 22px 1fr 36px; align-items: center; gap: 8px; padding: 6px 0; }
   .edit-row .n { font-size: 12px; color: #8e8e93; text-align: right; font-weight: 600; }
   .edit-row input { width: 100%; font-size: 16px; background: #f2f2f7; border: none; border-radius: 10px; padding: 10px 12px; color: #1c1c1e; }
   .edit-row input:focus { outline: none; background: #e8e8f0; }
@@ -458,21 +463,21 @@
       <rect width="300" height="348" fill="#f0ece3"/>
       <circle cx="150" cy="109" r="92" fill="#9b7ee8" style="mix-blend-mode:multiply"/>
       <circle cx="104" cy="189" r="92" fill="#f0c840" style="mix-blend-mode:multiply"/>
-      <circle cx="196" cy="189" r="92" fill="#e86060" style="mix-blend-mode:multiply"/>
+      <circle cx="196" cy="189" r="92" fill="#4a90e2" style="mix-blend-mode:multiply"/>
       <circle cx="150" cy="162" r="145" fill="none" stroke="#c9a84c" stroke-width="1.5"/>
       <!-- MIND — violet -->
-      <text x="150" y="28" text-anchor="middle" font-family="Georgia,serif" font-size="14" font-weight="bold" fill="#3d1a7a" letter-spacing="1.5">MIND</text>
-      <text x="150" y="43" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9.5" fill="#4a2290">Amour · Travail · Loisirs</text>
+      <text x="150" y="62" text-anchor="middle" font-family="Georgia,serif" font-size="14" font-weight="bold" fill="#3d1a7a" letter-spacing="1.5">MIND</text>
+      <text x="150" y="77" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9.5" fill="#4a2290">Amour · Travail · Loisirs</text>
       <!-- SPIRIT — jaune -->
       <text x="63" y="212" text-anchor="middle" font-family="Georgia,serif" font-size="14" font-weight="bold" fill="#5c3800" letter-spacing="1.5">SPIRIT</text>
       <text x="63" y="226" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#5c3800">Méditation · Yoga</text>
       <text x="63" y="238" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#5c3800">Bienveillance · Créativité</text>
       <text x="63" y="250" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#5c3800">Inspiration</text>
-      <!-- BODY — rouge -->
-      <text x="237" y="212" text-anchor="middle" font-family="Georgia,serif" font-size="14" font-weight="bold" fill="#6a0a0a" letter-spacing="1.5">BODY</text>
-      <text x="237" y="226" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#6a0a0a">Exercice · Étirement</text>
-      <text x="237" y="238" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#6a0a0a">Respiration · Sommeil</text>
-      <text x="237" y="250" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#6a0a0a">Alimentation · Sexualité</text>
+      <!-- BODY — bleu -->
+      <text x="237" y="212" text-anchor="middle" font-family="Georgia,serif" font-size="14" font-weight="bold" fill="#0a2a5c" letter-spacing="1.5">BODY</text>
+      <text x="237" y="226" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#0a2a5c">Exercice · Étirement</text>
+      <text x="237" y="238" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#0a2a5c">Respiration · Sommeil</text>
+      <text x="237" y="250" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="9" fill="#0a2a5c">Alimentation · Sexualité</text>
       <!-- FAMILLE & AMIS -->
       <line x1="26" y1="325" x2="96" y2="325" stroke="#c9a84c" stroke-width="1"/>
       <text x="150" y="329" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="10" font-weight="600" fill="#8e6a30" letter-spacing="3">FAMILLE &amp; AMIS</text>
