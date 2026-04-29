@@ -33,6 +33,8 @@ let selectedDate = new Date();
 let weekOffset = 0;
 let weekSwipeStart = null, weekSwiped = false;
 let reorderBuffer = [];
+let activeTab = 'today';
+let mhAddPillar = 'body';
 
 function getWeekMonday(offset) {
   const today = new Date();
@@ -281,7 +283,14 @@ document.getElementById('nextMonth').addEventListener('click', async () => { sta
 document.getElementById('prevMonthFocus').addEventListener('click', async () => { state.month--; if (state.month < 0) { state.month=11; state.year--; } await loadMonth(); render(); });
 document.getElementById('nextMonthFocus').addEventListener('click', async () => { state.month++; if (state.month > 11) { state.month=0; state.year++; } await loadMonth(); render(); });
 
-document.getElementById('fabBtn').addEventListener('click', openSettings);
+document.getElementById('fabBtn').addEventListener('click', () => {
+  if (activeTab === 'stats') {
+    const addRow = document.getElementById('mhAddRow');
+    if (addRow) { addRow.style.display = 'flex'; document.getElementById('mhAddInput')?.focus(); }
+  } else {
+    openSettings();
+  }
+});
 
 document.getElementById('validateAllTopbar').addEventListener('pointerdown', e => {
   e.preventDefault();
@@ -880,6 +889,7 @@ const PAGE_TITLES = { today: "Aujourd'hui", calendar: 'Calendrier', fruits: 'Fru
 
 document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => btn.addEventListener('click', async () => {
   const id = btn.dataset.tab;
+  activeTab = id;
 
   if (id === 'more') { openSettings(); return; }
 
@@ -921,9 +931,9 @@ async function toggleMonthlyHabit(id) {
   renderMonthlyStats();
 }
 
-async function addMonthlyHabit(name) {
+async function addMonthlyHabit(name, pillar) {
   if (!name.trim()) return;
-  monthlyState.habits.push({ id: genId(), name: name.trim() });
+  monthlyState.habits.push({ id: genId(), name: name.trim(), pillar: pillar || 'body' });
   await saveMonthlyHabits();
   renderMonthlyStats();
 }
@@ -940,39 +950,19 @@ function renderMonthlyStats() {
   const container = document.getElementById('statsMonthlyContainer');
   if (!container) return;
 
-  const isCurrentMonth = new Date().getFullYear() === state.year && new Date().getMonth() === state.month;
-
-  // ── Monthly habits checklist ──
   const doneCount = monthlyState.habits.filter(h => monthlyState.data[h.id]?.done).length;
   const total = monthlyState.habits.length;
-  let habitRows = monthlyState.habits.map(h => {
+  const habitRows = monthlyState.habits.map(h => {
     const done = !!monthlyState.data[h.id]?.done;
+    const p = h.pillar || 'body';
+    const pillLabel = p === 'body' ? 'Body' : p === 'mind' ? 'Mind' : 'Spirit';
     return `<div class="mh-habit-row">
       <button class="mh-check${done ? ' mh-check-done' : ''}" data-mid="${h.id}">${done ? '✓' : ''}</button>
       <span class="mh-habit-name${done ? ' mh-habit-done' : ''}">${escapeAttr(h.name)}</span>
+      <span class="pillar-tag pillar-${p}">${pillLabel}</span>
       <button class="mh-habit-del" data-del="${h.id}">×</button>
     </div>`;
   }).join('');
-
-  // ── Daily progress table ──
-  const activeCount = state.habits.filter(h => h.name.trim()).length;
-  const DAY_NAMES = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
-  const days = daysInMonth(state.year, state.month);
-  const maxDay = isCurrentMonth ? new Date().getDate() : days;
-  let totalDone = 0, totalPossible = 0, rows = '';
-  if (activeCount) {
-    for (let d = 1; d <= maxDay; d++) {
-      const done = Object.values(state.data[d] || {}).filter(e => (typeof e==='object'?e.v:e) === 1).length;
-      const pct = Math.round((done / activeCount) * 100);
-      totalDone += done; totalPossible += activeCount;
-      const date = new Date(state.year, state.month, d);
-      const dateLabel = `${DAY_NAMES[date.getDay()]} ${d} ${MONTHS_SHORT_FR[state.month]}`;
-      const barColor = pct === 0 ? '#e5e5ea' : pct === 100 ? '#34c759' : '#5856d6';
-      const pctColor = pct === 0 ? '#c7c7cc' : pct === 100 ? '#34c759' : '#5856d6';
-      rows += `<div class="mh-row"><span class="mh-date">${dateLabel}</span><div class="mh-bar-wrap"><div class="mh-bar-fill" style="width:${pct}%;background:${barColor}"></div></div><span class="mh-pct" style="color:${pctColor}">${pct}%</span></div>`;
-    }
-  }
-  const avgPct = totalPossible > 0 ? Math.round((totalDone / totalPossible) * 100) : 0;
 
   container.innerHTML = `
     <div class="mh-month-nav">
@@ -983,24 +973,20 @@ function renderMonthlyStats() {
     <div class="mh-card">
       <div class="mh-card-header">
         <span class="mh-card-title">Objectifs du mois</span>
-        <span class="mh-avg">${total ? `${doneCount}/${total}` : ''}</span>
-        <button class="mh-add-btn" id="addMonthlyBtn">+</button>
+        <span class="mh-avg">${total ? `${doneCount}/${total} accomplis` : 'Appuie sur + pour commencer'}</span>
       </div>
-      ${habitRows || '<div class="mh-empty">Aucun objectif. Appuie sur + pour en ajouter.</div>'}
+      ${habitRows || '<div class="mh-empty">Aucun objectif ce mois.</div>'}
       <div class="mh-add-row" id="mhAddRow" style="display:none">
         <input class="mh-add-input" id="mhAddInput" placeholder="Nom de l'objectif…" />
+        <div class="pillar-select" id="mhPillarSel">
+          <button class="ps-btn ps-active-body" data-pillar="body">💪</button>
+          <button class="ps-btn" data-pillar="mind">🧠</button>
+          <button class="ps-btn" data-pillar="spirit">🙏</button>
+        </div>
         <button class="mh-add-confirm" id="mhAddConfirm">✓</button>
       </div>
-    </div>
-    ${activeCount ? `<div class="mh-card">
-      <div class="mh-card-header">
-        <span class="mh-card-title">Habitudes quotidiennes</span>
-        <span class="mh-avg">Moy. ${avgPct}%</span>
-      </div>
-      ${rows || '<div class="mh-empty">Aucune donnée ce mois.</div>'}
-    </div>` : ''}`;
+    </div>`;
 
-  // Nav mois
   document.getElementById('statsPrevMonth')?.addEventListener('click', async () => {
     state.month--; if (state.month < 0) { state.month = 11; state.year--; }
     await loadMonth(); await loadMonthlyData(state.year, state.month); renderMonthlyStats();
@@ -1010,19 +996,33 @@ function renderMonthlyStats() {
     await loadMonth(); await loadMonthlyData(state.year, state.month); renderMonthlyStats();
   });
 
-  // Toggle checklist
   container.querySelectorAll('.mh-check').forEach(btn => btn.addEventListener('click', () => toggleMonthlyHabit(btn.dataset.mid)));
   container.querySelectorAll('.mh-habit-del').forEach(btn => btn.addEventListener('click', () => deleteMonthlyHabit(btn.dataset.del)));
 
-  // Add monthly habit
-  const addBtn = document.getElementById('addMonthlyBtn');
   const addRow = document.getElementById('mhAddRow');
   const addInput = document.getElementById('mhAddInput');
   const addConfirm = document.getElementById('mhAddConfirm');
-  addBtn?.addEventListener('click', () => { addRow.style.display = 'flex'; addInput.focus(); });
-  const confirmAdd = async () => { await addMonthlyHabit(addInput.value); addInput.value = ''; addRow.style.display = 'none'; };
+  const pillarSel = document.getElementById('mhPillarSel');
+
+  pillarSel?.querySelectorAll('.ps-btn').forEach(btn => btn.addEventListener('click', () => {
+    mhAddPillar = btn.dataset.pillar;
+    pillarSel.querySelectorAll('.ps-btn').forEach(b => {
+      b.className = `ps-btn${b.dataset.pillar === mhAddPillar ? ' ps-active-' + mhAddPillar : ''}`;
+    });
+  }));
+
+  const confirmAdd = async () => {
+    if (!addInput.value.trim()) return;
+    await addMonthlyHabit(addInput.value, mhAddPillar);
+    addInput.value = '';
+    mhAddPillar = 'body';
+    addRow.style.display = 'none';
+  };
   addConfirm?.addEventListener('click', confirmAdd);
-  addInput?.addEventListener('keydown', e => { if (e.key === 'Enter') confirmAdd(); if (e.key === 'Escape') { addRow.style.display = 'none'; addInput.value = ''; } });
+  addInput?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') confirmAdd();
+    if (e.key === 'Escape') { addRow.style.display = 'none'; addInput.value = ''; mhAddPillar = 'body'; }
+  });
 }
 
 // ── Fruits ─────────────────────────────────────────────────────────────────────
