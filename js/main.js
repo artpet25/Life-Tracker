@@ -863,7 +863,7 @@ async function saveReorder() {
 
 // ── Tab navigation ─────────────────────────────────────────────────────────────
 
-const PAGE_TITLES = { today: "Aujourd'hui", calendar: 'Calendrier', fruits: 'Fruits & Légumes', focus: 'Focus', more: 'Paramètres' };
+const PAGE_TITLES = { today: "Aujourd'hui", calendar: 'Calendrier', fruits: 'Fruits & Légumes', focus: 'Focus', stats: 'Monthly Habits', more: 'Paramètres' };
 
 document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => btn.addEventListener('click', async () => {
   const id = btn.dataset.tab;
@@ -895,7 +895,67 @@ document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => btn.addEventListe
   }
   else if (id === 'calendar') { await loadMonth(); renderCalendarGrid(); }
   else if (id === 'focus') { render(); }
+  else if (id === 'stats') { await loadMonth(); renderMonthlyStats(); }
 }));
+
+// ── Monthly Stats ─────────────────────────────────────────────────────────────
+
+function renderMonthlyStats() {
+  const container = document.getElementById('statsMonthlyContainer');
+  if (!container) return;
+
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === state.year && today.getMonth() === state.month;
+  const days = daysInMonth(state.year, state.month);
+  const maxDay = isCurrentMonth ? today.getDate() : days;
+  const activeCount = state.habits.filter(h => h.name.trim()).length;
+  if (!activeCount) { container.innerHTML = '<div class="mh-empty">Aucune habitude configurée.</div>'; return; }
+
+  const DAY_NAMES = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+
+  let totalDone = 0, totalPossible = 0;
+  let rows = '';
+  for (let d = 1; d <= maxDay; d++) {
+    const done = Object.values(state.data[d] || {}).filter(e => (typeof e==='object'?e.v:e) === 1).length;
+    const pct = Math.round((done / activeCount) * 100);
+    totalDone += done; totalPossible += activeCount;
+    const date = new Date(state.year, state.month, d);
+    const dayName = DAY_NAMES[date.getDay()];
+    const dateLabel = `${dayName} ${d} ${MONTHS_SHORT_FR[state.month]}`;
+    const barColor = pct === 0 ? '#e5e5ea' : pct === 100 ? '#34c759' : '#5856d6';
+    const pctColor = pct === 0 ? '#c7c7cc' : pct === 100 ? '#34c759' : '#5856d6';
+    rows += `<div class="mh-row">
+      <span class="mh-date">${dateLabel}</span>
+      <div class="mh-bar-wrap"><div class="mh-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
+      <span class="mh-pct" style="color:${pctColor}">${pct}%</span>
+    </div>`;
+  }
+
+  const avgPct = totalPossible > 0 ? Math.round((totalDone / totalPossible) * 100) : 0;
+
+  container.innerHTML = `
+    <div style="padding:16px 20px 8px;display:flex;align-items:center;justify-content:space-between;">
+      <button class="calendar-nav-btn" id="statsPrevMonth">‹</button>
+      <span style="font-size:16px;font-weight:700;color:#1c1c1e">${MONTHS_FR[state.month]} ${state.year}</span>
+      <button class="calendar-nav-btn" id="statsNextMonth">›</button>
+    </div>
+    <div class="mh-card">
+      <div class="mh-card-header">
+        <span class="mh-card-title">Progression journalière</span>
+        <span class="mh-avg">Moy. ${avgPct}%</span>
+      </div>
+      ${rows || '<div class="mh-empty">Aucune donnée ce mois.</div>'}
+    </div>`;
+
+  document.getElementById('statsPrevMonth')?.addEventListener('click', async () => {
+    state.month--; if (state.month < 0) { state.month = 11; state.year--; }
+    await loadMonth(); renderMonthlyStats();
+  });
+  document.getElementById('statsNextMonth')?.addEventListener('click', async () => {
+    state.month++; if (state.month > 11) { state.month = 0; state.year++; }
+    await loadMonth(); renderMonthlyStats();
+  });
+}
 
 // ── Fruits ─────────────────────────────────────────────────────────────────────
 
