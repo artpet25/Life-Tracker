@@ -1,4 +1,5 @@
 const HABITS_KEY = 'habits:list:v7', HABITS_KEY_OLD = 'habits:list:v6', MAX_HABITS = 12, MIN_HABITS = 1;
+const MONTHLY_KEY = 'monthly:list:v1';
 const INITIAL_HABITS = [
   { id: 'h1', name: 'Sport / renfo / repos' },
   { id: 'h2', name: 'Daily Légumes' },
@@ -68,6 +69,18 @@ function updateAllMonthLabels() {
 
 function dataKey(y, m) { return `habits:v5:${y}-${String(m+1).padStart(2,'0')}`; }
 function dataKeyOld(y, m) { return `habits:v4:${y}-${String(m+1).padStart(2,'0')}`; }
+function monthlyDataKey(y, m) { return `monthly:data:v1:${y}-${String(m+1).padStart(2,'0')}`; }
+
+// Monthly habits state
+const monthlyState = { habits: [], data: {} };
+async function loadMonthlyHabits() {
+  try { const r = await window.storage.get(MONTHLY_KEY); monthlyState.habits = r?.value ? JSON.parse(r.value) : []; } catch(e) { monthlyState.habits = []; }
+}
+async function saveMonthlyHabits() { try { await window.storage.set(MONTHLY_KEY, JSON.stringify(monthlyState.habits)); } catch(e) {} }
+async function loadMonthlyData(y, m) {
+  try { const r = await window.storage.get(monthlyDataKey(y, m)); monthlyState.data = r?.value ? JSON.parse(r.value) : {}; } catch(e) { monthlyState.data = {}; }
+}
+async function saveMonthlyData(y, m) { try { await window.storage.set(monthlyDataKey(y, m), JSON.stringify(monthlyState.data)); } catch(e) {} }
 function daysInMonth(y, m) { return new Date(y, m+1, 0).getDate(); }
 function escapeAttr(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 
@@ -895,66 +908,121 @@ document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => btn.addEventListe
   }
   else if (id === 'calendar') { await loadMonth(); renderCalendarGrid(); }
   else if (id === 'focus') { render(); }
-  else if (id === 'stats') { await loadMonth(); renderMonthlyStats(); }
+  else if (id === 'stats') { await loadMonth(); await loadMonthlyData(state.year, state.month); renderMonthlyStats(); }
 }));
 
 // ── Monthly Stats ─────────────────────────────────────────────────────────────
+
+async function toggleMonthlyHabit(id) {
+  const cur = monthlyState.data[id];
+  if (cur?.done) { delete monthlyState.data[id]; }
+  else { monthlyState.data[id] = { done: true, at: todayStr() }; }
+  await saveMonthlyData(state.year, state.month);
+  renderMonthlyStats();
+}
+
+async function addMonthlyHabit(name) {
+  if (!name.trim()) return;
+  monthlyState.habits.push({ id: genId(), name: name.trim() });
+  await saveMonthlyHabits();
+  renderMonthlyStats();
+}
+
+async function deleteMonthlyHabit(id) {
+  monthlyState.habits = monthlyState.habits.filter(h => h.id !== id);
+  delete monthlyState.data[id];
+  await saveMonthlyHabits();
+  await saveMonthlyData(state.year, state.month);
+  renderMonthlyStats();
+}
 
 function renderMonthlyStats() {
   const container = document.getElementById('statsMonthlyContainer');
   if (!container) return;
 
-  const today = new Date();
-  const isCurrentMonth = today.getFullYear() === state.year && today.getMonth() === state.month;
-  const days = daysInMonth(state.year, state.month);
-  const maxDay = isCurrentMonth ? today.getDate() : days;
-  const activeCount = state.habits.filter(h => h.name.trim()).length;
-  if (!activeCount) { container.innerHTML = '<div class="mh-empty">Aucune habitude configurée.</div>'; return; }
+  const isCurrentMonth = new Date().getFullYear() === state.year && new Date().getMonth() === state.month;
 
-  const DAY_NAMES = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
-
-  let totalDone = 0, totalPossible = 0;
-  let rows = '';
-  for (let d = 1; d <= maxDay; d++) {
-    const done = Object.values(state.data[d] || {}).filter(e => (typeof e==='object'?e.v:e) === 1).length;
-    const pct = Math.round((done / activeCount) * 100);
-    totalDone += done; totalPossible += activeCount;
-    const date = new Date(state.year, state.month, d);
-    const dayName = DAY_NAMES[date.getDay()];
-    const dateLabel = `${dayName} ${d} ${MONTHS_SHORT_FR[state.month]}`;
-    const barColor = pct === 0 ? '#e5e5ea' : pct === 100 ? '#34c759' : '#5856d6';
-    const pctColor = pct === 0 ? '#c7c7cc' : pct === 100 ? '#34c759' : '#5856d6';
-    rows += `<div class="mh-row">
-      <span class="mh-date">${dateLabel}</span>
-      <div class="mh-bar-wrap"><div class="mh-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
-      <span class="mh-pct" style="color:${pctColor}">${pct}%</span>
+  // ── Monthly habits checklist ──
+  const doneCount = monthlyState.habits.filter(h => monthlyState.data[h.id]?.done).length;
+  const total = monthlyState.habits.length;
+  let habitRows = monthlyState.habits.map(h => {
+    const done = !!monthlyState.data[h.id]?.done;
+    return `<div class="mh-habit-row">
+      <button class="mh-check${done ? ' mh-check-done' : ''}" data-mid="${h.id}">${done ? '✓' : ''}</button>
+      <span class="mh-habit-name${done ? ' mh-habit-done' : ''}">${escapeAttr(h.name)}</span>
+      <button class="mh-habit-del" data-del="${h.id}">×</button>
     </div>`;
-  }
+  }).join('');
 
+  // ── Daily progress table ──
+  const activeCount = state.habits.filter(h => h.name.trim()).length;
+  const DAY_NAMES = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+  const days = daysInMonth(state.year, state.month);
+  const maxDay = isCurrentMonth ? new Date().getDate() : days;
+  let totalDone = 0, totalPossible = 0, rows = '';
+  if (activeCount) {
+    for (let d = 1; d <= maxDay; d++) {
+      const done = Object.values(state.data[d] || {}).filter(e => (typeof e==='object'?e.v:e) === 1).length;
+      const pct = Math.round((done / activeCount) * 100);
+      totalDone += done; totalPossible += activeCount;
+      const date = new Date(state.year, state.month, d);
+      const dateLabel = `${DAY_NAMES[date.getDay()]} ${d} ${MONTHS_SHORT_FR[state.month]}`;
+      const barColor = pct === 0 ? '#e5e5ea' : pct === 100 ? '#34c759' : '#5856d6';
+      const pctColor = pct === 0 ? '#c7c7cc' : pct === 100 ? '#34c759' : '#5856d6';
+      rows += `<div class="mh-row"><span class="mh-date">${dateLabel}</span><div class="mh-bar-wrap"><div class="mh-bar-fill" style="width:${pct}%;background:${barColor}"></div></div><span class="mh-pct" style="color:${pctColor}">${pct}%</span></div>`;
+    }
+  }
   const avgPct = totalPossible > 0 ? Math.round((totalDone / totalPossible) * 100) : 0;
 
   container.innerHTML = `
-    <div style="padding:16px 20px 8px;display:flex;align-items:center;justify-content:space-between;">
+    <div class="mh-month-nav">
       <button class="calendar-nav-btn" id="statsPrevMonth">‹</button>
-      <span style="font-size:16px;font-weight:700;color:#1c1c1e">${MONTHS_FR[state.month]} ${state.year}</span>
+      <span class="mh-month-label">${MONTHS_FR[state.month]} ${state.year}</span>
       <button class="calendar-nav-btn" id="statsNextMonth">›</button>
     </div>
     <div class="mh-card">
       <div class="mh-card-header">
-        <span class="mh-card-title">Progression journalière</span>
+        <span class="mh-card-title">Objectifs du mois</span>
+        <span class="mh-avg">${total ? `${doneCount}/${total}` : ''}</span>
+        <button class="mh-add-btn" id="addMonthlyBtn">+</button>
+      </div>
+      ${habitRows || '<div class="mh-empty">Aucun objectif. Appuie sur + pour en ajouter.</div>'}
+      <div class="mh-add-row" id="mhAddRow" style="display:none">
+        <input class="mh-add-input" id="mhAddInput" placeholder="Nom de l'objectif…" />
+        <button class="mh-add-confirm" id="mhAddConfirm">✓</button>
+      </div>
+    </div>
+    ${activeCount ? `<div class="mh-card">
+      <div class="mh-card-header">
+        <span class="mh-card-title">Habitudes quotidiennes</span>
         <span class="mh-avg">Moy. ${avgPct}%</span>
       </div>
       ${rows || '<div class="mh-empty">Aucune donnée ce mois.</div>'}
-    </div>`;
+    </div>` : ''}`;
 
+  // Nav mois
   document.getElementById('statsPrevMonth')?.addEventListener('click', async () => {
     state.month--; if (state.month < 0) { state.month = 11; state.year--; }
-    await loadMonth(); renderMonthlyStats();
+    await loadMonth(); await loadMonthlyData(state.year, state.month); renderMonthlyStats();
   });
   document.getElementById('statsNextMonth')?.addEventListener('click', async () => {
     state.month++; if (state.month > 11) { state.month = 0; state.year++; }
-    await loadMonth(); renderMonthlyStats();
+    await loadMonth(); await loadMonthlyData(state.year, state.month); renderMonthlyStats();
   });
+
+  // Toggle checklist
+  container.querySelectorAll('.mh-check').forEach(btn => btn.addEventListener('click', () => toggleMonthlyHabit(btn.dataset.mid)));
+  container.querySelectorAll('.mh-habit-del').forEach(btn => btn.addEventListener('click', () => deleteMonthlyHabit(btn.dataset.del)));
+
+  // Add monthly habit
+  const addBtn = document.getElementById('addMonthlyBtn');
+  const addRow = document.getElementById('mhAddRow');
+  const addInput = document.getElementById('mhAddInput');
+  const addConfirm = document.getElementById('mhAddConfirm');
+  addBtn?.addEventListener('click', () => { addRow.style.display = 'flex'; addInput.focus(); });
+  const confirmAdd = async () => { await addMonthlyHabit(addInput.value); addInput.value = ''; addRow.style.display = 'none'; };
+  addConfirm?.addEventListener('click', confirmAdd);
+  addInput?.addEventListener('keydown', e => { if (e.key === 'Enter') confirmAdd(); if (e.key === 'Escape') { addRow.style.display = 'none'; addInput.value = ''; } });
 }
 
 // ── Fruits ─────────────────────────────────────────────────────────────────────
@@ -1155,6 +1223,8 @@ document.getElementById('nextWeek').addEventListener('click',async()=>{
 window.reloadAppData = async () => {
   await loadHabits();
   await loadMonth();
+  await loadMonthlyHabits();
+  await loadMonthlyData(state.year, state.month);
   render(); renderCalendarGrid(); renderTodayHabits(); renderWeekStrip();
 };
 
@@ -1162,6 +1232,8 @@ window.reloadAppData = async () => {
   const splashStart = Date.now();
   await loadHabits();
   await loadMonth();
+  await loadMonthlyHabits();
+  await loadMonthlyData(state.year, state.month);
   render();
   renderCalendarGrid();
   renderTodayHabits();
