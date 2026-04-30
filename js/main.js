@@ -1,12 +1,15 @@
 const HABITS_KEY = 'habits:list:v7', HABITS_KEY_OLD = 'habits:list:v6', MAX_HABITS = 12, MIN_HABITS = 1;
 const MONTHLY_KEY = 'monthly:list:v1';
 const INITIAL_HABITS = [
-  { id: 'h1', name: 'Sport / renfo / repos' },
-  { id: 'h2', name: 'Daily Légumes' },
-  { id: 'h3', name: 'Douche froide' },
-  { id: 'h4', name: 'Vitamine' },
-  { id: 'h5', name: 'Lecture' },
-  { id: 'h6', name: 'Méditation prière' },
+  { id: 'h1', name: 'Sport / Renfo / Récup',                  pillar: 'body'   },
+  { id: 'h2', name: 'Daily Légumes & Vita',                   pillar: 'body'   },
+  { id: 'h3', name: 'Douche froide',                          pillar: 'body'   },
+  { id: 'h4', name: 'Love & Mariage',                         pillar: 'mind'   },
+  { id: 'h5', name: 'Work',                                   pillar: 'mind'   },
+  { id: 'h6', name: 'Lecture',                                pillar: 'mind'   },
+  { id: 'h7', name: 'Méditation / Prière',                    pillar: 'spirit' },
+  { id: 'h8', name: "Témoigner de l'amour / Bienveillance",   pillar: 'spirit' },
+  { id: 'h9', name: 'Conscience / Respiration',               pillar: 'spirit' },
 ];
 function genId() { return 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
 function todayStr() { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
