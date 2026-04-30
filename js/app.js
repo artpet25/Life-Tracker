@@ -68,39 +68,16 @@ function updateAuthUI(email) {
 // ── Auth init ─────────────────────────────────────────────────────────────────
 
 async function initAuth() {
-  // Toujours écouter les changements de session (magic link, refresh, logout)
   _supa.auth.onAuthStateChange(async (event, session) => {
-    if (session?.user) {
-      await onLogin(session.user);
-    } else {
-      _user = null;
-      updateAuthUI(null);
-    }
+    if (session?.user) await onLogin(session.user);
+    else { _user = null; updateAuthUI(null); }
   });
 
-  // 1. Session Supabase valide → connexion auto + pull données
   const { data: { session } } = await _supa.auth.getSession();
-  if (session?.user) {
-    await onLogin(session.user);
-    return;
-  }
+  if (session?.user) await onLogin(session.user);
 
-  // 2. Données locales présentes → pas besoin de forcer l'auth, travail local
-  const hasData = Object.keys(localStorage).some(k =>
-    k.startsWith('habits:') || k.startsWith('fruits:') || k.startsWith('yearly:') || k.startsWith('monthly:')
-  );
-  if (hasData) {
-    document.getElementById('authOverlay').style.display = 'none';
-    return;
-  }
-
-  // 3. Première utilisation → afficher l'overlay avec email mémorisé
-  const savedEmail = localStorage.getItem('auth:email');
-  if (savedEmail) {
-    const inp = document.getElementById('authEmail');
-    if (inp) inp.value = savedEmail;
-  }
-  document.getElementById('authOverlay').style.display = 'flex';
+  // Jamais d'overlay d'auth — app toujours accessible
+  document.getElementById('authOverlay').style.display = 'none';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
