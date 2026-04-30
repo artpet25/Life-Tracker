@@ -78,12 +78,29 @@ function updateAuthUI(email) {
 // ── Auth init ─────────────────────────────────────────────────────────────────
 
 async function initAuth() {
+  // 1. Session Supabase valide → connexion auto
   const { data: { session } } = await _supa.auth.getSession();
   if (session?.user) {
     await onLogin(session.user);
-  } else {
-    document.getElementById('authOverlay').style.display = 'flex';
+    return;
   }
+
+  // 2. Données locales présentes → pas besoin de forcer l'auth
+  const hasData = Object.keys(localStorage).some(k =>
+    k.startsWith('habits:') || k.startsWith('fruits:') || k.startsWith('yearly:') || k.startsWith('monthly:')
+  );
+  if (hasData) {
+    document.getElementById('authOverlay').style.display = 'none';
+    return;
+  }
+
+  // 3. Première utilisation → afficher l'overlay
+  const savedEmail = localStorage.getItem('auth:email');
+  if (savedEmail) {
+    const inp = document.getElementById('authEmail');
+    if (inp) inp.value = savedEmail;
+  }
+  document.getElementById('authOverlay').style.display = 'flex';
 
   _supa.auth.onAuthStateChange(async (event, session) => {
     if (session?.user) {
@@ -102,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('authSendBtn')?.addEventListener('click', async () => {
     const email = document.getElementById('authEmail')?.value.trim();
     if (!email) return;
+    localStorage.setItem('auth:email', email);
     const btn = document.getElementById('authSendBtn');
     btn.disabled = true; btn.textContent = '…';
     const { error } = await _supa.auth.signInWithOtp({
