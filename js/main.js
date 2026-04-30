@@ -36,6 +36,99 @@ let reorderBuffer = [];
 let activeTab = 'today';
 let mhAddPillar = 'body';
 
+const YEARLY_GOALS = [
+  { id:'yg1',  name:'Objectif mariage',               pillar:'spirit', type:'slider' },
+  { id:'yg2',  name:'Améliorer la communication',      pillar:'spirit', type:'slider' },
+  { id:'yg3',  name:'Amour & amis',                   pillar:'spirit', type:'habit-link', match:/amour|mariage|love/i },
+  { id:'yg4',  name:'Gratitude & temps de prière',     pillar:'spirit', type:'slider' },
+  { id:'yg5',  name:'Bienveillance',                  pillar:'spirit', type:'slider' },
+  { id:'yg6',  name:'Méditation et respiration',       pillar:'spirit', type:'slider' },
+  { id:'yg7',  name:'5k en 20 mins',                  pillar:'body',   type:'subtasks', steps:['1 min','5 mins','10 mins','15 mins','20 mins'] },
+  { id:'yg8',  name:'Renfo musculation',               pillar:'body',   type:'subtasks', steps:['1 600','1 650','1 680','1 690','1 700'] },
+  { id:'yg9',  name:'Alimentation & légumes',          pillar:'body',   type:'fruits-link' },
+  { id:'yg10', name:'Lire 1 livre par mois',           pillar:'mind',   type:'books', count:12 },
+  { id:'yg11', name:'100 meilleurs films avec nounou', pillar:'mind',   type:'slider' },
+  { id:'yg12', name:'1700 aux échecs',                 pillar:'mind',   type:'subtasks', steps:['1 600','1 650','1 680','1 690','1 700'] },
+  { id:'yg13', name:'Bureau de rêve',                  pillar:'mind',   type:'slider' },
+  { id:'yg14', name:'Peindre',                         pillar:'mind',   type:'slider' },
+];
+
+function yearlyDataKey(y) { return `yearly:v1:${y}`; }
+const yearlyState = { data: {}, yearHabitData: {} };
+const ygExpanded = new Set();
+
+async function loadYearlyData(y) {
+  try { const r = await window.storage.get(yearlyDataKey(y)); yearlyState.data = r?.value ? JSON.parse(r.value) : {}; }
+  catch(e) { yearlyState.data = {}; }
+}
+async function saveYearlyData(y) { try { await window.storage.set(yearlyDataKey(y), JSON.stringify(yearlyState.data)); } catch(e) {} }
+
+async function loadYearHabitData(year) {
+  const all = {};
+  for (let m = 0; m < 12; m++) {
+    try {
+      const r = await window.storage.get(dataKey(year, m));
+      if (r?.value) {
+        const mData = JSON.parse(r.value);
+        const days = daysInMonth(year, m);
+        for (let d = 1; d <= days; d++) {
+          if (mData[d]) all[`${year}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`] = mData[d];
+        }
+      }
+    } catch(e) {}
+  }
+  yearlyState.yearHabitData = all;
+}
+
+function calcGoalProgress(goal, year) {
+  const data = yearlyState.data[goal.id] || {};
+  const today = new Date();
+  switch (goal.type) {
+    case 'slider': return data.progress ?? 0;
+    case 'subtasks': {
+      const done = (data.subtasks || []).filter(Boolean).length;
+      return Math.round(done / goal.steps.length * 100);
+    }
+    case 'books': {
+      const done = (data.books || []).filter(b => b?.done).length;
+      return Math.round(done / goal.count * 100);
+    }
+    case 'habit-link': {
+      const habit = state.habits.find(h => goal.match.test(h.name));
+      if (!habit) return 0;
+      let total = 0, done = 0;
+      const maxM = year === today.getFullYear() ? today.getMonth() : 11;
+      for (let m = 0; m <= maxM; m++) {
+        const maxD = (year === today.getFullYear() && m === today.getMonth()) ? today.getDate() : daysInMonth(year, m);
+        for (let d = 1; d <= maxD; d++) {
+          total++;
+          const e = (yearlyState.yearHabitData[`${year}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`] || {})[habit.id];
+          if (e && (typeof e === 'object' ? e.v : e) === 1) done++;
+        }
+      }
+      return total ? Math.round(done / total * 100) : 0;
+    }
+    case 'fruits-link': {
+      const habit = state.habits.find(h => /légume|legume/i.test(h.name));
+      if (!habit) return 0;
+      let target = 0, achieved = 0;
+      for (let m = 4; m <= 11; m++) {
+        if (year === today.getFullYear() && m > today.getMonth()) break;
+        target++;
+        const maxD = (year === today.getFullYear() && m === today.getMonth()) ? today.getDate() : daysInMonth(year, m);
+        let done = 0;
+        for (let d = 1; d <= maxD; d++) {
+          const e = (yearlyState.yearHabitData[`${year}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`] || {})[habit.id];
+          if (e && (typeof e === 'object' ? e.v : e) === 1) done++;
+        }
+        if (done >= Math.ceil(maxD * 0.7)) achieved++;
+      }
+      return target ? Math.round(achieved / 8 * 100) : 0;
+    }
+    default: return 0;
+  }
+}
+
 function getWeekMonday(offset) {
   const today = new Date();
   const dow = today.getDay();
@@ -284,12 +377,7 @@ document.getElementById('prevMonthFocus').addEventListener('click', async () => 
 document.getElementById('nextMonthFocus').addEventListener('click', async () => { state.month++; if (state.month > 11) { state.month=0; state.year++; } await loadMonth(); render(); });
 
 document.getElementById('fabBtn').addEventListener('click', () => {
-  if (activeTab === 'stats') {
-    const addRow = document.getElementById('mhAddRow');
-    if (addRow) { addRow.style.display = 'flex'; document.getElementById('mhAddInput')?.focus(); }
-  } else {
-    openSettings();
-  }
+  if (activeTab !== 'stats') openSettings();
 });
 
 document.getElementById('validateAllTopbar').addEventListener('pointerdown', e => {
@@ -885,7 +973,7 @@ async function saveReorder() {
 
 // ── Tab navigation ─────────────────────────────────────────────────────────────
 
-const PAGE_TITLES = { today: "Aujourd'hui", calendar: 'Calendrier', fruits: 'Fruits & Légumes', focus: 'Focus', stats: 'Monthly Habits', more: 'Paramètres' };
+const PAGE_TITLES = { today: "Aujourd'hui", calendar: 'Calendrier', fruits: 'Fruits & Légumes', focus: 'Focus', stats: 'Yearly Habits', more: 'Paramètres' };
 
 document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => btn.addEventListener('click', async () => {
   const id = btn.dataset.tab;
@@ -918,110 +1006,137 @@ document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => btn.addEventListe
   }
   else if (id === 'calendar') { await loadMonth(); renderCalendarGrid(); }
   else if (id === 'focus') { render(); }
-  else if (id === 'stats') { await loadMonth(); await loadMonthlyData(state.year, state.month); renderMonthlyStats(); }
+  else if (id === 'stats') { const y = new Date().getFullYear(); await loadYearlyData(y); await loadYearHabitData(y); renderYearlyHabits(); }
 }));
 
-// ── Monthly Stats ─────────────────────────────────────────────────────────────
+// ── Yearly Goals ──────────────────────────────────────────────────────────────
 
-async function toggleMonthlyHabit(id) {
-  const cur = monthlyState.data[id];
-  if (cur?.done) { delete monthlyState.data[id]; }
-  else { monthlyState.data[id] = { done: true, at: todayStr() }; }
-  await saveMonthlyData(state.year, state.month);
-  renderMonthlyStats();
+function ygDetailHtml(goal) {
+  const data = yearlyState.data[goal.id] || {};
+  if (goal.type === 'slider') {
+    const v = data.progress ?? 0;
+    return `<div class="yg-detail" data-detail="${goal.id}">
+      <input type="range" class="yg-slider" min="0" max="100" value="${v}" data-gid="${goal.id}">
+      <div class="yg-slider-labels"><span>0%</span><span style="font-weight:700;color:#5856d6">${v}%</span><span>100%</span></div>
+    </div>`;
+  }
+  if (goal.type === 'subtasks') {
+    const steps = data.subtasks || [];
+    return `<div class="yg-detail" data-detail="${goal.id}"><div class="yg-subtasks">${
+      goal.steps.map((s, i) => {
+        const done = !!steps[i];
+        return `<label class="yg-step"><input type="checkbox" class="yg-step-cb" ${done ? 'checked' : ''} data-gid="${goal.id}" data-si="${i}"><span class="yg-step-label${done ? ' done' : ''}">${escapeAttr(s)}</span></label>`;
+      }).join('')
+    }</div></div>`;
+  }
+  if (goal.type === 'books') {
+    const books = data.books || [];
+    return `<div class="yg-detail" data-detail="${goal.id}">${
+      Array.from({ length: goal.count }, (_, i) => {
+        const b = books[i] || { title: '', done: false };
+        return `<div class="yg-book"><input type="checkbox" class="yg-book-cb" ${b.done ? 'checked' : ''} data-gid="${goal.id}" data-bi="${i}"><input type="text" class="yg-book-input${b.done ? ' done' : ''}" value="${escapeAttr(b.title)}" placeholder="Livre ${i + 1}…" data-gid="${goal.id}" data-bi="${i}"></div>`;
+      }).join('')
+    }</div>`;
+  }
+  if (goal.type === 'habit-link' || goal.type === 'fruits-link') {
+    return `<div class="yg-detail"><div class="yg-auto-label">Calculé automatiquement depuis les habitudes</div></div>`;
+  }
+  return '';
 }
 
-async function addMonthlyHabit(name, pillar) {
-  if (!name.trim()) return;
-  monthlyState.habits.push({ id: genId(), name: name.trim(), pillar: pillar || 'body' });
-  await saveMonthlyHabits();
-  renderMonthlyStats();
-}
-
-async function deleteMonthlyHabit(id) {
-  monthlyState.habits = monthlyState.habits.filter(h => h.id !== id);
-  delete monthlyState.data[id];
-  await saveMonthlyHabits();
-  await saveMonthlyData(state.year, state.month);
-  renderMonthlyStats();
-}
-
-function renderMonthlyStats() {
+function renderYearlyHabits() {
   const container = document.getElementById('statsMonthlyContainer');
   if (!container) return;
-
-  const doneCount = monthlyState.habits.filter(h => monthlyState.data[h.id]?.done).length;
-  const total = monthlyState.habits.length;
-  const habitRows = monthlyState.habits.map(h => {
-    const done = !!monthlyState.data[h.id]?.done;
-    const p = h.pillar || 'body';
-    const pillLabel = p === 'body' ? 'Body' : p === 'mind' ? 'Mind' : 'Spirit';
-    return `<div class="mh-habit-row">
-      <button class="mh-check${done ? ' mh-check-done' : ''}" data-mid="${h.id}">${done ? '✓' : ''}</button>
-      <span class="mh-habit-name${done ? ' mh-habit-done' : ''}">${escapeAttr(h.name)}</span>
-      <span class="pillar-tag pillar-${p}">${pillLabel}</span>
-      <button class="mh-habit-del" data-del="${h.id}">×</button>
-    </div>`;
-  }).join('');
-
-  container.innerHTML = `
-    <div class="mh-month-nav">
-      <button class="calendar-nav-btn" id="statsPrevMonth">‹</button>
-      <span class="mh-month-label">${MONTHS_FR[state.month]} ${state.year}</span>
-      <button class="calendar-nav-btn" id="statsNextMonth">›</button>
-    </div>
-    <div class="mh-card">
-      <div class="mh-card-header">
-        <span class="mh-card-title">Objectifs du mois</span>
-        <span class="mh-avg">${total ? `${doneCount}/${total} accomplis` : 'Appuie sur + pour commencer'}</span>
-      </div>
-      ${habitRows || '<div class="mh-empty">Aucun objectif ce mois.</div>'}
-      <div class="mh-add-row" id="mhAddRow" style="display:none">
-        <input class="mh-add-input" id="mhAddInput" placeholder="Nom de l'objectif…" />
-        <div class="pillar-select" id="mhPillarSel">
-          <button class="ps-btn ps-active-body" data-pillar="body">💪</button>
-          <button class="ps-btn" data-pillar="mind">🧠</button>
-          <button class="ps-btn" data-pillar="spirit">🙏</button>
+  const year = new Date().getFullYear();
+  const PILLAR_LABELS = { spirit: 'Spirit', body: 'Body', mind: 'Mind' };
+  let html = `<div class="yg-year-header">${year}</div>`;
+  for (const pillar of ['spirit', 'body', 'mind']) {
+    const goals = YEARLY_GOALS.filter(g => g.pillar === pillar);
+    html += `<div class="yg-card"><div class="yg-card-header"><span class="pillar-tag pillar-${pillar}">${PILLAR_LABELS[pillar]}</span></div>`;
+    for (const goal of goals) {
+      const pct = calcGoalProgress(goal, year);
+      const col = pct === 100 ? '#34c759' : '#5856d6';
+      const isExpanded = ygExpanded.has(goal.id);
+      const canExpand = goal.type !== 'habit-link' && goal.type !== 'fruits-link';
+      html += `<div class="yg-goal" data-gid="${goal.id}">
+        <div class="yg-goal-main"${canExpand ? ` data-expand="${goal.id}"` : ''}>
+          <div class="yg-goal-top">
+            <span class="yg-goal-name">${escapeAttr(goal.name)}</span>
+            ${canExpand ? `<span class="yg-chevron">${isExpanded ? '▾' : '›'}</span>` : ''}
+            <span class="yg-goal-pct" id="yg-pct-${goal.id}" style="color:${col}">${pct}%</span>
+          </div>
+          <div class="yg-goal-bar"><div class="yg-goal-bar-fill" id="yg-fill-${goal.id}" style="width:${pct}%;background:${col}"></div></div>
         </div>
-        <button class="mh-add-confirm" id="mhAddConfirm">✓</button>
-      </div>
-    </div>`;
+        ${isExpanded ? ygDetailHtml(goal) : ''}
+      </div>`;
+    }
+    html += `</div>`;
+  }
+  container.innerHTML = html;
 
-  document.getElementById('statsPrevMonth')?.addEventListener('click', async () => {
-    state.month--; if (state.month < 0) { state.month = 11; state.year--; }
-    await loadMonth(); await loadMonthlyData(state.year, state.month); renderMonthlyStats();
-  });
-  document.getElementById('statsNextMonth')?.addEventListener('click', async () => {
-    state.month++; if (state.month > 11) { state.month = 0; state.year++; }
-    await loadMonth(); await loadMonthlyData(state.year, state.month); renderMonthlyStats();
-  });
-
-  container.querySelectorAll('.mh-check').forEach(btn => btn.addEventListener('click', () => toggleMonthlyHabit(btn.dataset.mid)));
-  container.querySelectorAll('.mh-habit-del').forEach(btn => btn.addEventListener('click', () => deleteMonthlyHabit(btn.dataset.del)));
-
-  const addRow = document.getElementById('mhAddRow');
-  const addInput = document.getElementById('mhAddInput');
-  const addConfirm = document.getElementById('mhAddConfirm');
-  const pillarSel = document.getElementById('mhPillarSel');
-
-  pillarSel?.querySelectorAll('.ps-btn').forEach(btn => btn.addEventListener('click', () => {
-    mhAddPillar = btn.dataset.pillar;
-    pillarSel.querySelectorAll('.ps-btn').forEach(b => {
-      b.className = `ps-btn${b.dataset.pillar === mhAddPillar ? ' ps-active-' + mhAddPillar : ''}`;
+  // Expand / collapse
+  container.querySelectorAll('[data-expand]').forEach(el => {
+    el.addEventListener('click', e => {
+      if (e.target.tagName === 'INPUT') return;
+      const gid = el.dataset.expand;
+      ygExpanded.has(gid) ? ygExpanded.delete(gid) : ygExpanded.add(gid);
+      renderYearlyHabits();
     });
-  }));
+  });
 
-  const confirmAdd = async () => {
-    if (!addInput.value.trim()) return;
-    await addMonthlyHabit(addInput.value, mhAddPillar);
-    addInput.value = '';
-    mhAddPillar = 'body';
-    addRow.style.display = 'none';
-  };
-  addConfirm?.addEventListener('click', confirmAdd);
-  addInput?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') confirmAdd();
-    if (e.key === 'Escape') { addRow.style.display = 'none'; addInput.value = ''; mhAddPillar = 'body'; }
+  // Slider (live preview, save on release)
+  container.querySelectorAll('.yg-slider').forEach(slider => {
+    slider.addEventListener('click', e => e.stopPropagation());
+    slider.addEventListener('input', () => {
+      const gid = slider.dataset.gid;
+      const v = parseInt(slider.value, 10);
+      if (!yearlyState.data[gid]) yearlyState.data[gid] = {};
+      yearlyState.data[gid].progress = v;
+      const col = v === 100 ? '#34c759' : '#5856d6';
+      const pctEl = document.getElementById(`yg-pct-${gid}`);
+      const fillEl = document.getElementById(`yg-fill-${gid}`);
+      const lblEl = slider.nextElementSibling?.querySelector('span:nth-child(2)');
+      if (pctEl) { pctEl.textContent = v + '%'; pctEl.style.color = col; }
+      if (fillEl) { fillEl.style.width = v + '%'; fillEl.style.background = col; }
+      if (lblEl) lblEl.textContent = v + '%';
+    });
+    slider.addEventListener('change', async () => saveYearlyData(year));
+  });
+
+  // Subtask checkboxes
+  container.querySelectorAll('.yg-step-cb').forEach(cb => {
+    cb.addEventListener('change', async () => {
+      const gid = cb.dataset.gid, si = parseInt(cb.dataset.si, 10);
+      if (!yearlyState.data[gid]) yearlyState.data[gid] = {};
+      if (!yearlyState.data[gid].subtasks) yearlyState.data[gid].subtasks = new Array(YEARLY_GOALS.find(g => g.id === gid).steps.length).fill(false);
+      yearlyState.data[gid].subtasks[si] = cb.checked;
+      await saveYearlyData(year);
+      renderYearlyHabits();
+    });
+  });
+
+  // Book checkboxes
+  container.querySelectorAll('.yg-book-cb').forEach(cb => {
+    cb.addEventListener('change', async () => {
+      const gid = cb.dataset.gid, bi = parseInt(cb.dataset.bi, 10);
+      if (!yearlyState.data[gid]) yearlyState.data[gid] = {};
+      if (!yearlyState.data[gid].books) yearlyState.data[gid].books = Array.from({ length: 12 }, () => ({ title: '', done: false }));
+      yearlyState.data[gid].books[bi].done = cb.checked;
+      await saveYearlyData(year);
+      renderYearlyHabits();
+    });
+  });
+
+  // Book title inputs (save on blur, no re-render)
+  container.querySelectorAll('.yg-book-input').forEach(inp => {
+    inp.addEventListener('click', e => e.stopPropagation());
+    inp.addEventListener('change', async () => {
+      const gid = inp.dataset.gid, bi = parseInt(inp.dataset.bi, 10);
+      if (!yearlyState.data[gid]) yearlyState.data[gid] = {};
+      if (!yearlyState.data[gid].books) yearlyState.data[gid].books = Array.from({ length: 12 }, () => ({ title: '', done: false }));
+      yearlyState.data[gid].books[bi].title = inp.value;
+      await saveYearlyData(year);
+    });
   });
 }
 
@@ -1223,8 +1338,7 @@ document.getElementById('nextWeek').addEventListener('click',async()=>{
 window.reloadAppData = async () => {
   await loadHabits();
   await loadMonth();
-  await loadMonthlyHabits();
-  await loadMonthlyData(state.year, state.month);
+  await loadYearlyData(new Date().getFullYear());
   render(); renderCalendarGrid(); renderTodayHabits(); renderWeekStrip();
 };
 
@@ -1232,8 +1346,7 @@ window.reloadAppData = async () => {
   const splashStart = Date.now();
   await loadHabits();
   await loadMonth();
-  await loadMonthlyHabits();
-  await loadMonthlyData(state.year, state.month);
+  await loadYearlyData(new Date().getFullYear());
   render();
   renderCalendarGrid();
   renderTodayHabits();
