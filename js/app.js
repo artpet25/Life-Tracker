@@ -27,7 +27,9 @@ window.storage = {
 // ── Sync helpers ─────────────────────────────────────────────────────────────
 
 async function pushLocalToSupabase(userId) {
-  const keys = Object.keys(localStorage).filter(k => k.startsWith('habits:') || k.startsWith('fruits:'));
+  const keys = Object.keys(localStorage).filter(k =>
+    k.startsWith('habits:') || k.startsWith('fruits:') || k.startsWith('yearly:') || k.startsWith('monthly:')
+  );
   if (!keys.length) return;
   const rows = keys.map(key => ({
     user_id: userId, key, value: localStorage.getItem(key),
@@ -46,21 +48,9 @@ async function pullSupabaseToLocal(userId) {
 async function onLogin(user) {
   _user = user;
 
-  const localKeys = Object.keys(localStorage).filter(k => k.startsWith('habits:') || k.startsWith('fruits:'));
-
-  if (localKeys.length > 0) {
-    // Push all local data to Supabase (local wins)
-    const rows = localKeys.map(key => ({
-      user_id: user.id, key, value: localStorage.getItem(key),
-      updated_at: new Date().toISOString()
-    }));
-    const { error } = await _supa.from('user_storage').upsert(rows, { onConflict: 'user_id,key' });
-    if (error) console.error('[Supabase] push error:', error.message);
-  } else {
-    // No local data → pull from Supabase
-    const pulled = await pullSupabaseToLocal(user.id);
-    if (pulled && window.reloadAppData) await window.reloadAppData();
-  }
+  // Supabase = source de vérité : on tire toujours les dernières données
+  const pulled = await pullSupabaseToLocal(user.id);
+  if (pulled && window.reloadAppData) await window.reloadAppData();
 
   document.getElementById('authOverlay')?.style.setProperty('display', 'none');
   updateAuthUI(user.email);
@@ -78,30 +68,7 @@ function updateAuthUI(email) {
 // ── Auth init ─────────────────────────────────────────────────────────────────
 
 async function initAuth() {
-  // 1. Session Supabase valide → connexion auto
-  const { data: { session } } = await _supa.auth.getSession();
-  if (session?.user) {
-    await onLogin(session.user);
-    return;
-  }
-
-  // 2. Données locales présentes → pas besoin de forcer l'auth
-  const hasData = Object.keys(localStorage).some(k =>
-    k.startsWith('habits:') || k.startsWith('fruits:') || k.startsWith('yearly:') || k.startsWith('monthly:')
-  );
-  if (hasData) {
-    document.getElementById('authOverlay').style.display = 'none';
-    return;
-  }
-
-  // 3. Première utilisation → afficher l'overlay
-  const savedEmail = localStorage.getItem('auth:email');
-  if (savedEmail) {
-    const inp = document.getElementById('authEmail');
-    if (inp) inp.value = savedEmail;
-  }
-  document.getElementById('authOverlay').style.display = 'flex';
-
+  // Toujours écouter les changements de session (magic link, refresh, logout)
   _supa.auth.onAuthStateChange(async (event, session) => {
     if (session?.user) {
       await onLogin(session.user);
@@ -110,6 +77,30 @@ async function initAuth() {
       updateAuthUI(null);
     }
   });
+
+  // 1. Session Supabase valide → connexion auto + pull données
+  const { data: { session } } = await _supa.auth.getSession();
+  if (session?.user) {
+    await onLogin(session.user);
+    return;
+  }
+
+  // 2. Données locales présentes → pas besoin de forcer l'auth, travail local
+  const hasData = Object.keys(localStorage).some(k =>
+    k.startsWith('habits:') || k.startsWith('fruits:') || k.startsWith('yearly:') || k.startsWith('monthly:')
+  );
+  if (hasData) {
+    document.getElementById('authOverlay').style.display = 'none';
+    return;
+  }
+
+  // 3. Première utilisation → afficher l'overlay avec email mémorisé
+  const savedEmail = localStorage.getItem('auth:email');
+  if (savedEmail) {
+    const inp = document.getElementById('authEmail');
+    if (inp) inp.value = savedEmail;
+  }
+  document.getElementById('authOverlay').style.display = 'flex';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
