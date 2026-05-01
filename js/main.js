@@ -57,14 +57,46 @@ const YEARLY_GOALS = [
 ];
 
 function yearlyDataKey(y) { return `yearly:v1:${y}`; }
-const yearlyState = { data: {}, yearHabitData: {} };
+const yearlyState = { data: {}, yearHabitData: {}, custom: [] };
 const ygExpanded = new Set();
 
 async function loadYearlyData(y) {
-  try { const r = await window.storage.get(yearlyDataKey(y)); yearlyState.data = r?.value ? JSON.parse(r.value) : {}; }
-  catch(e) { yearlyState.data = {}; }
+  try {
+    const r = await window.storage.get(yearlyDataKey(y));
+    if (r?.value) {
+      const p = JSON.parse(r.value);
+      yearlyState.custom = p._custom || [];
+      yearlyState.data = { ...p };
+      delete yearlyState.data._custom;
+    } else { yearlyState.data = {}; yearlyState.custom = []; }
+  } catch(e) { yearlyState.data = {}; yearlyState.custom = []; }
 }
-async function saveYearlyData(y) { try { await window.storage.set(yearlyDataKey(y), JSON.stringify(yearlyState.data)); } catch(e) {} }
+async function saveYearlyData(y) {
+  try { await window.storage.set(yearlyDataKey(y), JSON.stringify({ ...yearlyState.data, _custom: yearlyState.custom })); } catch(e) {}
+}
+
+async function addYearlyGoal(name, pillar, type) {
+  if (!name.trim()) return;
+  const id = 'yg_' + Date.now().toString(36);
+  yearlyState.custom.push({ id, name: name.trim(), pillar, type });
+  if (type === 'subtasks') yearlyState.data[id] = { steps: [], subtasks: [] };
+  await saveYearlyData(new Date().getFullYear());
+  renderYearlyHabits();
+}
+async function deleteYearlyGoal(id) {
+  yearlyState.custom = yearlyState.custom.filter(g => g.id !== id);
+  delete yearlyState.data[id];
+  ygExpanded.delete(id);
+  await saveYearlyData(new Date().getFullYear());
+  renderYearlyHabits();
+}
+async function addYearlyStep(goalId) {
+  if (!yearlyState.data[goalId]) yearlyState.data[goalId] = { steps: [], subtasks: [] };
+  yearlyState.data[goalId].steps.push('');
+  yearlyState.data[goalId].subtasks.push(false);
+  await saveYearlyData(new Date().getFullYear());
+  renderYearlyHabits();
+}
 
 async function loadYearHabitData(year) {
   const all = {};
@@ -89,8 +121,9 @@ function calcGoalProgress(goal, year) {
   switch (goal.type) {
     case 'slider': return data.progress ?? 0;
     case 'subtasks': {
+      const steps = goal.steps || data.steps || [];
       const done = (data.subtasks || []).filter(Boolean).length;
-      return Math.round(done / goal.steps.length * 100);
+      return steps.length ? Math.round(done / steps.length * 100) : 0;
     }
     case 'books': {
       const done = (data.books || []).filter(b => b?.done).length;
@@ -380,7 +413,8 @@ document.getElementById('prevMonthFocus').addEventListener('click', async () => 
 document.getElementById('nextMonthFocus').addEventListener('click', async () => { state.month++; if (state.month > 11) { state.month=0; state.year++; } await loadMonth(); render(); });
 
 document.getElementById('fabBtn').addEventListener('click', () => {
-  if (activeTab !== 'stats') openSettings();
+  if (activeTab === 'stats') openYgAdd();
+  else openSettings();
 });
 
 document.getElementById('validateAllTopbar').addEventListener('pointerdown', e => {
@@ -1016,21 +1050,28 @@ document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => btn.addEventListe
 
 function ygDetailHtml(goal) {
   const data = yearlyState.data[goal.id] || {};
+  const isCustom = yearlyState.custom.some(g => g.id === goal.id);
+  const delBtn = isCustom ? `<div class="yg-detail-top"><button class="yg-del-goal" data-gid="${goal.id}" title="Supprimer">× Supprimer</button></div>` : '';
+
   if (goal.type === 'slider') {
     const v = data.progress ?? 0;
-    return `<div class="yg-detail" data-detail="${goal.id}">
+    return `<div class="yg-detail" data-detail="${goal.id}">${delBtn}
       <input type="range" class="yg-slider" min="0" max="100" value="${v}" data-gid="${goal.id}">
       <div class="yg-slider-labels"><span>0%</span><span style="font-weight:700;color:#5856d6">${v}%</span><span>100%</span></div>
     </div>`;
   }
   if (goal.type === 'subtasks') {
-    const steps = data.subtasks || [];
-    return `<div class="yg-detail" data-detail="${goal.id}"><div class="yg-subtasks">${
-      goal.steps.map((s, i) => {
-        const done = !!steps[i];
-        return `<label class="yg-step"><input type="checkbox" class="yg-step-cb" ${done ? 'checked' : ''} data-gid="${goal.id}" data-si="${i}"><span class="yg-step-label${done ? ' done' : ''}">${escapeAttr(s)}</span></label>`;
-      }).join('')
-    }</div></div>`;
+    const steps = goal.steps || data.steps || [];
+    const subs = data.subtasks || [];
+    const stepsHtml = steps.map((s, i) => {
+      const done = !!subs[i];
+      if (isCustom) {
+        return `<div class="yg-step"><input type="checkbox" class="yg-step-cb" ${done ? 'checked' : ''} data-gid="${goal.id}" data-si="${i}"><input type="text" class="yg-step-name${done ? ' done' : ''}" value="${escapeAttr(s)}" placeholder="Étape ${i + 1}…" data-gid="${goal.id}" data-si="${i}"></div>`;
+      }
+      return `<label class="yg-step"><input type="checkbox" class="yg-step-cb" ${done ? 'checked' : ''} data-gid="${goal.id}" data-si="${i}"><span class="yg-step-label${done ? ' done' : ''}">${escapeAttr(s)}</span></label>`;
+    }).join('');
+    const addBtn = isCustom ? `<button class="yg-add-step" data-gid="${goal.id}">+ Ajouter une étape</button>` : '';
+    return `<div class="yg-detail" data-detail="${goal.id}">${delBtn}<div class="yg-subtasks">${stepsHtml}</div>${addBtn}</div>`;
   }
   if (goal.type === 'books') {
     const books = data.books || [];
@@ -1052,9 +1093,23 @@ function renderYearlyHabits() {
   if (!container) return;
   const year = new Date().getFullYear();
   const PILLAR_LABELS = { spirit: 'Spirit', body: 'Body', mind: 'Mind' };
-  let html = `<div class="yg-year-header">${year}</div>`;
+  const allGoals = [...YEARLY_GOALS, ...yearlyState.custom];
+  const totalPct = allGoals.length
+    ? Math.round(allGoals.reduce((sum, g) => sum + calcGoalProgress(g, year), 0) / allGoals.length)
+    : 0;
+  const totalCol = totalPct === 100 ? '#34c759' : '#5856d6';
+
+  let html = `<div class="yg-year-header">${year}</div>
+  <div class="yg-total-card">
+    <div class="yg-total-top"><span class="yg-total-label">Progression totale</span><span class="yg-total-pct" style="color:${totalCol}">${totalPct}%</span></div>
+    <div class="yg-goal-bar" style="margin-top:8px"><div class="yg-goal-bar-fill" style="width:${totalPct}%;background:${totalCol}"></div></div>
+  </div>`;
+
   for (const pillar of ['spirit', 'body', 'mind']) {
-    const goals = YEARLY_GOALS.filter(g => g.pillar === pillar);
+    const goals = [
+      ...YEARLY_GOALS.filter(g => g.pillar === pillar),
+      ...yearlyState.custom.filter(g => g.pillar === pillar),
+    ];
     html += `<div class="yg-card"><div class="yg-card-header"><span class="pillar-tag pillar-${pillar}">${PILLAR_LABELS[pillar]}</span></div>`;
     for (const goal of goals) {
       const pct = calcGoalProgress(goal, year);
@@ -1111,10 +1166,39 @@ function renderYearlyHabits() {
     cb.addEventListener('change', async () => {
       const gid = cb.dataset.gid, si = parseInt(cb.dataset.si, 10);
       if (!yearlyState.data[gid]) yearlyState.data[gid] = {};
-      if (!yearlyState.data[gid].subtasks) yearlyState.data[gid].subtasks = new Array(YEARLY_GOALS.find(g => g.id === gid).steps.length).fill(false);
+      const goal = allGoals.find(g => g.id === gid);
+      const stepsLen = goal?.steps?.length || yearlyState.data[gid]?.steps?.length || 0;
+      if (!yearlyState.data[gid].subtasks) yearlyState.data[gid].subtasks = new Array(stepsLen).fill(false);
       yearlyState.data[gid].subtasks[si] = cb.checked;
       await saveYearlyData(year);
       renderYearlyHabits();
+    });
+  });
+
+  // Custom step name inputs (save on change, no re-render)
+  container.querySelectorAll('.yg-step-name').forEach(inp => {
+    inp.addEventListener('click', e => e.stopPropagation());
+    inp.addEventListener('change', async () => {
+      const gid = inp.dataset.gid, si = parseInt(inp.dataset.si, 10);
+      if (!yearlyState.data[gid]) yearlyState.data[gid] = { steps: [], subtasks: [] };
+      yearlyState.data[gid].steps[si] = inp.value;
+      await saveYearlyData(year);
+    });
+  });
+
+  // Add step to custom subtask goal
+  container.querySelectorAll('.yg-add-step').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      await addYearlyStep(btn.dataset.gid);
+    });
+  });
+
+  // Delete custom goal
+  container.querySelectorAll('.yg-del-goal').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      if (confirm('Supprimer cet objectif ?')) await deleteYearlyGoal(btn.dataset.gid);
     });
   });
 
@@ -1130,7 +1214,7 @@ function renderYearlyHabits() {
     });
   });
 
-  // Book title inputs (save on blur, no re-render)
+  // Book title inputs (save on change, no re-render)
   container.querySelectorAll('.yg-book-input').forEach(inp => {
     inp.addEventListener('click', e => e.stopPropagation());
     inp.addEventListener('change', async () => {
@@ -1344,6 +1428,43 @@ window.reloadAppData = async () => {
   await loadYearlyData(new Date().getFullYear());
   render(); renderCalendarGrid(); renderTodayHabits(); renderWeekStrip();
 };
+
+// ── Add Yearly Goal modal ────────────────────────────────────────────────────
+
+let ygAddPillar = 'spirit', ygAddType = 'slider';
+
+function openYgAdd() {
+  ygAddPillar = 'spirit'; ygAddType = 'slider';
+  document.getElementById('ygAddName').value = '';
+  document.querySelectorAll('#ygAddBackdrop [data-pillar]').forEach(b => b.classList.toggle('yg-type-active', b.dataset.pillar === ygAddPillar));
+  document.querySelectorAll('#ygAddBackdrop [data-type]').forEach(b => b.classList.toggle('yg-type-active', b.dataset.type === ygAddType));
+  document.getElementById('ygAddBackdrop').classList.add('open');
+  setTimeout(() => document.getElementById('ygAddName').focus(), 100);
+}
+function closeYgAdd() { document.getElementById('ygAddBackdrop').classList.remove('open'); }
+
+document.getElementById('ygAddBackdrop').addEventListener('click', e => { if (e.target.id === 'ygAddBackdrop') closeYgAdd(); });
+
+document.querySelectorAll('#ygAddBackdrop [data-pillar]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    ygAddPillar = btn.dataset.pillar;
+    document.querySelectorAll('#ygAddBackdrop [data-pillar]').forEach(b => b.classList.toggle('yg-type-active', b.dataset.pillar === ygAddPillar));
+  });
+});
+
+document.querySelectorAll('#ygAddBackdrop [data-type]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    ygAddType = btn.dataset.type;
+    document.querySelectorAll('#ygAddBackdrop [data-type]').forEach(b => b.classList.toggle('yg-type-active', b.dataset.type === ygAddType));
+  });
+});
+
+document.getElementById('ygAddConfirm').addEventListener('click', async () => {
+  const name = document.getElementById('ygAddName').value.trim();
+  if (!name) return;
+  await addYearlyGoal(name, ygAddPillar, ygAddType);
+  closeYgAdd();
+});
 
 (async function init() {
   const splashStart = Date.now();
