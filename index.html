@@ -111,22 +111,27 @@
   .mh-add-input { flex: 1; font-size: 15px; background: #f2f2f7; border: none; border-radius: 10px; padding: 8px 12px; color: #1c1c1e; outline: none; min-width: 0; }
   .mh-add-confirm { background: #5856d6; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; color: white; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
-  /* Yearly Goals */
-  .yg-year-header { padding: 14px 20px 4px; font-size: 28px; font-weight: 800; color: #1c1c1e; letter-spacing: -0.5px; }
-  .yg-card { background: white; border-radius: 20px; margin: 0 16px 14px; box-shadow: 0 2px 16px rgba(0,0,0,0.05); overflow: hidden; }
-  .yg-card-header { padding: 12px 16px 10px; border-bottom: 1px solid #f2f2f7; }
-  .yg-goal { border-bottom: 1px solid #f8f8f8; }
-  .yg-goal:last-child { border-bottom: none; }
-  .yg-goal-main { padding: 12px 16px 10px; cursor: pointer; user-select: none; -webkit-user-select: none; }
-  .yg-goal-top { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
-  .yg-goal-name { flex: 1; font-size: 14px; font-weight: 600; color: #1c1c1e; }
-  .yg-chevron { font-size: 14px; color: #c7c7cc; flex-shrink: 0; }
-  .yg-goal-pct { font-size: 13px; font-weight: 700; min-width: 38px; text-align: right; flex-shrink: 0; }
-  .yg-goal-bar { height: 5px; background: #f2f2f7; border-radius: 3px; overflow: hidden; }
-  .yg-goal-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
-  .yg-detail { padding: 10px 16px 14px; background: #fafafa; border-top: 1px solid #f2f2f7; }
+  /* Yearly Goals v2 */
+  .yg2-container { padding: 0 16px 8px; }
+  .yg2-year-header { font-size: 28px; font-weight: 800; color: #1c1c1e; letter-spacing: -0.5px; padding: 14px 0 10px; }
+  .yg2-ring-card { background: #e4e4eb; border-radius: 28px; padding: 26px 20px 20px; margin-bottom: 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .yg2-ring-wrap { position: relative; width: 150px; height: 150px; }
+  .yg2-ring-svg { width: 150px; height: 150px; display: block; }
+  .yg2-ring-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; }
+  .yg2-ring-pct { font-size: 36px; font-weight: 800; color: #1c1c1e; letter-spacing: -1px; line-height: 1; }
+  .yg2-ring-label { font-size: 17px; font-weight: 700; color: #1c1c1e; }
+  .yg2-section-label { font-size: 12px; font-weight: 700; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.06em; margin: 6px 0 8px; }
+  .yg2-card { background: #e4e4eb; border-radius: 20px; padding: 16px 18px 14px; margin-bottom: 10px; }
+  .yg2-card-main { cursor: pointer; user-select: none; -webkit-user-select: none; }
+  .yg2-card-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 11px; }
+  .yg2-card-name { font-size: 15px; font-weight: 600; color: #1c1c1e; flex: 1; padding-right: 8px; }
+  .yg2-card-chevron { font-size: 13px; color: #8e8e93; margin-left: 4px; flex-shrink: 0; }
+  .yg2-card-pct { font-size: 16px; font-weight: 800; color: #1c1c1e; flex-shrink: 0; }
+  .yg2-bar { height: 10px; background: rgba(0,0,0,0.12); border-radius: 10px; overflow: hidden; }
+  .yg2-bar-fill { height: 100%; border-radius: 10px; transition: width 0.4s ease; }
+  .yg2-card .yg-detail { background: rgba(0,0,0,0.05); border-radius: 12px; margin-top: 12px; border-top: none; padding: 12px 14px; }
   .yg-slider { width: 100%; accent-color: #5856d6; cursor: pointer; display: block; }
-  .yg-slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: #c7c7cc; margin-top: 4px; }
+  .yg-slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: #8e8e93; margin-top: 4px; }
   .yg-subtasks { display: flex; flex-direction: column; gap: 10px; }
   .yg-step { display: flex; align-items: center; gap: 10px; cursor: pointer; }
   .yg-step input[type="checkbox"] { width: 18px; height: 18px; accent-color: #5856d6; flex-shrink: 0; cursor: pointer; }
@@ -135,17 +140,13 @@
   .yg-book { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
   .yg-book:last-child { margin-bottom: 0; }
   .yg-book input[type="checkbox"] { width: 18px; height: 18px; accent-color: #5856d6; flex-shrink: 0; cursor: pointer; }
-  .yg-book-input { flex: 1; font-size: 14px; background: #f2f2f7; border: none; border-radius: 8px; padding: 7px 10px; color: #1c1c1e; outline: none; min-width: 0; }
+  .yg-book-input { flex: 1; font-size: 14px; background: rgba(0,0,0,0.06); border: none; border-radius: 8px; padding: 7px 10px; color: #1c1c1e; outline: none; min-width: 0; }
   .yg-book-input.done { text-decoration: line-through; color: #8e8e93; }
   .yg-auto-label { font-size: 12px; color: #8e8e93; font-style: italic; text-align: center; padding: 4px 0; }
-  .yg-total-card { background: white; border-radius: 20px; margin: 0 16px 14px; padding: 16px 20px; box-shadow: 0 2px 16px rgba(0,0,0,0.05); }
-  .yg-total-top { display: flex; align-items: baseline; justify-content: space-between; }
-  .yg-total-label { font-size: 12px; font-weight: 700; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.05em; }
-  .yg-total-pct { font-size: 32px; font-weight: 800; letter-spacing: -1px; }
   .yg-detail-top { display: flex; justify-content: flex-end; margin-bottom: 8px; }
-  .yg-del-goal { background: none; border: none; cursor: pointer; color: #ff3b30; font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 8px; background: #fff0f0; }
-  .yg-add-step { margin-top: 12px; background: #f2f2f7; border: none; border-radius: 10px; padding: 9px 14px; font-size: 13px; font-weight: 600; color: #5856d6; cursor: pointer; width: 100%; text-align: center; }
-  .yg-step-name { flex: 1; font-size: 14px; background: #f2f2f7; border: none; border-radius: 8px; padding: 6px 10px; color: #1c1c1e; outline: none; min-width: 0; }
+  .yg-del-goal { background: rgba(255,59,48,0.12); border: none; cursor: pointer; color: #ff3b30; font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 8px; }
+  .yg-add-step { margin-top: 12px; background: rgba(0,0,0,0.07); border: none; border-radius: 10px; padding: 9px 14px; font-size: 13px; font-weight: 600; color: #5856d6; cursor: pointer; width: 100%; text-align: center; }
+  .yg-step-name { flex: 1; font-size: 14px; background: rgba(0,0,0,0.06); border: none; border-radius: 8px; padding: 6px 10px; color: #1c1c1e; outline: none; min-width: 0; }
   .yg-step-name.done { text-decoration: line-through; color: #8e8e93; }
   /* Weekly Tracker */
   .wk-nav-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px 6px; }
@@ -501,6 +502,10 @@
   <button class="nav-btn" data-tab="focus">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
   </button>
+  <!-- Weekly Tracker -->
+  <button class="nav-btn" data-tab="weekly">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="4" x2="8" y2="9"/><line x1="16" y1="4" x2="16" y2="9"/><line x1="7" y1="13" x2="17" y2="13"/><line x1="7" y1="17" x2="14" y2="17"/></svg>
+  </button>
   <!-- Stats / Monthly -->
   <button class="nav-btn" data-tab="stats">
     <svg viewBox="0 0 24 24"><rect x="3" y="12" width="4" height="9"/><rect x="9.5" y="7" width="4" height="14"/><rect x="16" y="3" width="4" height="18"/></svg>
@@ -512,10 +517,6 @@
   <!-- Fruits & Légumes -->
   <button class="nav-btn" data-tab="fruits">
     <svg viewBox="0 0 24 24"><path d="M12 5C9.5 5 7 7 7 10C7 14.5 9.5 20 12 20C14.5 20 17 14.5 17 10C17 7 14.5 5 12 5Z"/><path d="M12 5V3"/><path d="M13.5 3C15.5 2.2 17.5 3.5 17.5 3.5"/></svg>
-  </button>
-  <!-- Weekly Tracker -->
-  <button class="nav-btn" data-tab="weekly">
-    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="4" x2="8" y2="9"/><line x1="16" y1="4" x2="16" y2="9"/><line x1="7" y1="13" x2="17" y2="13"/><line x1="7" y1="17" x2="14" y2="17"/></svg>
   </button>
 </nav>
 

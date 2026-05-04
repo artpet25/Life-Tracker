@@ -1126,17 +1126,42 @@ function renderYearlyHabits() {
   const container = document.getElementById('statsMonthlyContainer');
   if (!container) return;
   const year = new Date().getFullYear();
-  const PILLAR_LABELS = { spirit: 'Spirit', body: 'Body', mind: 'Mind' };
+  const PILLAR_LABELS = { spirit: '🙏 Spirit', body: '💪 Body', mind: '🧠 Mind' };
+  const PILLAR_GRADS = {
+    spirit: 'linear-gradient(to right, #FBBF24, #F97316)',
+    body:   'linear-gradient(to right, #34D399, #06B6D4)',
+    mind:   'linear-gradient(to right, #A78BFA, #C084FC)',
+  };
   const allGoals = [...YEARLY_GOALS, ...yearlyState.custom];
   const totalPct = allGoals.length
     ? Math.round(allGoals.reduce((sum, g) => sum + calcGoalProgress(g, year), 0) / allGoals.length)
     : 0;
-  const totalCol = totalPct === 100 ? '#34c759' : '#5856d6';
 
-  let html = `<div class="yg-year-header">${year}</div>
-  <div class="yg-total-card">
-    <div class="yg-total-top"><span class="yg-total-label">Progression totale</span><span class="yg-total-pct" style="color:${totalCol}">${totalPct}%</span></div>
-    <div class="yg-goal-bar" style="margin-top:8px"><div class="yg-goal-bar-fill" style="width:${totalPct}%;background:${totalCol}"></div></div>
+  const CIRC = 263.89;
+  const ringOffset = (CIRC * (1 - totalPct / 100)).toFixed(2);
+  const ringStroke = totalPct === 100 ? '#34c759' : 'url(#ygRingGrad)';
+
+  let html = `<div class="yg2-container">
+  <div class="yg2-year-header">${year}</div>
+  <div class="yg2-ring-card">
+    <div class="yg2-ring-wrap">
+      <svg class="yg2-ring-svg" viewBox="0 0 100 100">
+        <defs>
+          <linearGradient id="ygRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#5856d6"/>
+            <stop offset="100%" stop-color="#06B6D4"/>
+          </linearGradient>
+        </defs>
+        <circle cx="50" cy="50" r="42" stroke="#d1d1d6" stroke-width="9" fill="none"/>
+        <circle cx="50" cy="50" r="42" stroke="${ringStroke}" stroke-width="9" fill="none"
+          stroke-dasharray="${CIRC}" stroke-dashoffset="${ringOffset}" stroke-linecap="round"
+          transform="rotate(-90 50 50)"/>
+      </svg>
+      <div class="yg2-ring-center">
+        <div class="yg2-ring-pct">${totalPct}%</div>
+      </div>
+    </div>
+    <div class="yg2-ring-label">Progression ${year}</div>
   </div>`;
 
   for (const pillar of ['spirit', 'body', 'mind']) {
@@ -1144,26 +1169,26 @@ function renderYearlyHabits() {
       ...YEARLY_GOALS.filter(g => g.pillar === pillar),
       ...yearlyState.custom.filter(g => g.pillar === pillar),
     ];
-    html += `<div class="yg-card"><div class="yg-card-header"><span class="pillar-tag pillar-${pillar}">${PILLAR_LABELS[pillar]}</span></div>`;
+    if (!goals.length) continue;
+    html += `<div class="yg2-section-label">${PILLAR_LABELS[pillar]}</div>`;
     for (const goal of goals) {
       const pct = calcGoalProgress(goal, year);
-      const col = pct === 100 ? '#34c759' : '#5856d6';
       const isExpanded = ygExpanded.has(goal.id);
       const canExpand = goal.type !== 'habit-link' && goal.type !== 'fruits-link';
-      html += `<div class="yg-goal" data-gid="${goal.id}">
-        <div class="yg-goal-main"${canExpand ? ` data-expand="${goal.id}"` : ''}>
-          <div class="yg-goal-top">
-            <span class="yg-goal-name">${escapeAttr(goal.name)}</span>
-            ${canExpand ? `<span class="yg-chevron">${isExpanded ? '▾' : '›'}</span>` : ''}
-            <span class="yg-goal-pct" id="yg-pct-${goal.id}" style="color:${col}">${pct}%</span>
+      html += `<div class="yg2-card" data-gid="${goal.id}">
+        <div class="yg2-card-main"${canExpand ? ` data-expand="${goal.id}"` : ''}>
+          <div class="yg2-card-top">
+            <span class="yg2-card-name">${escapeAttr(goal.name)}</span>
+            ${canExpand ? `<span class="yg2-card-chevron">${isExpanded ? '▾' : '›'}</span>` : ''}
+            <span id="yg-pct-${goal.id}" class="yg2-card-pct">${pct}%</span>
           </div>
-          <div class="yg-goal-bar"><div class="yg-goal-bar-fill" id="yg-fill-${goal.id}" style="width:${pct}%;background:${col}"></div></div>
+          <div class="yg2-bar"><div class="yg2-bar-fill" id="yg-fill-${goal.id}" style="width:${pct}%;background:${PILLAR_GRADS[pillar]}"></div></div>
         </div>
         ${isExpanded ? ygDetailHtml(goal) : ''}
       </div>`;
     }
-    html += `</div>`;
   }
+  html += `</div>`;
   container.innerHTML = html;
 
   // Expand / collapse
@@ -1184,12 +1209,11 @@ function renderYearlyHabits() {
       const v = parseInt(slider.value, 10);
       if (!yearlyState.data[gid]) yearlyState.data[gid] = {};
       yearlyState.data[gid].progress = v;
-      const col = v === 100 ? '#34c759' : '#5856d6';
       const pctEl = document.getElementById(`yg-pct-${gid}`);
       const fillEl = document.getElementById(`yg-fill-${gid}`);
       const lblEl = slider.nextElementSibling?.querySelector('span:nth-child(2)');
-      if (pctEl) { pctEl.textContent = v + '%'; pctEl.style.color = col; }
-      if (fillEl) { fillEl.style.width = v + '%'; fillEl.style.background = col; }
+      if (pctEl) pctEl.textContent = v + '%';
+      if (fillEl) fillEl.style.width = v + '%';
       if (lblEl) lblEl.textContent = v + '%';
     });
     slider.addEventListener('change', async () => saveYearlyData(year));
