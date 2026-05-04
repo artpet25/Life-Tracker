@@ -24,6 +24,12 @@ const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','A
 const SVG_SIZE = 640, CENTER = 320, OUTER_R = 290, INNER_R = 110;
 const A_START = -Math.PI / 2 + 0.02, A_END = Math.PI;
 
+const PILLAR_PALETTES = {
+  spirit: ['#FBBF24','#F97316','#EF4444','#FB7185','#FDE68A'],
+  body:   ['#34D399','#06B6D4','#3B82F6','#4ADE80','#22D3EE'],
+  mind:   ['#A78BFA','#C084FC','#F472B6','#818CF8','#E879F9'],
+};
+
 const state = {
   habits: INITIAL_HABITS.map(h => ({ ...h })),
   editBuffer: [],
@@ -279,6 +285,14 @@ function render() {
   const arcSpan = A_END - A_START;
   const anglePerDay = arcSpan / days;
 
+  // Per-habit colors based on pillar
+  const habitColors = state.habits.map((h, hi) => {
+    const pillar = h.pillar || 'mind';
+    const palette = PILLAR_PALETTES[pillar];
+    const sameCount = state.habits.slice(0, hi).filter(x => (x.pillar || 'mind') === pillar).length;
+    return palette[sameCount % palette.length];
+  });
+
   let svg = `<svg viewBox="0 0 ${SVG_SIZE} ${SVG_SIZE}" xmlns="http://www.w3.org/2000/svg">`;
 
   for (let h = 0; h < bandCount; h++) {
@@ -300,13 +314,14 @@ function render() {
       const val = getVal(d, habitId);
       const isFuture = isFutureMonth || (isCurrentMonth && d > todayDay);
       const isToday = isCurrentMonth && d === todayDay;
-      let cls = 'cell ';
-      if (isFuture) cls += isWeekend ? 'cell-future-weekend' : 'cell-future';
-      else if (val === 1) cls += 'cell-done';
-      else if (val === 2) cls += 'cell-fail';
-      else if (isToday) cls += 'cell-fail';
-      else cls += isWeekend ? 'cell-empty-weekend' : 'cell-empty';
-      svg += `<path class="${cls}" d="${path}" data-cell="${d}-${habitId}" data-day="${d}" data-habit="${habitId}" />`;
+      let cls = 'cell';
+      let fillStyle = '';
+      if (isFuture) cls += isWeekend ? ' cell-future-weekend' : ' cell-future';
+      else if (val === 1) fillStyle = `fill:${habitColors[h]}`;
+      else if (val === 2 || isToday) fillStyle = 'fill:#ff3b30';
+      else cls += isWeekend ? ' cell-empty-weekend' : ' cell-empty';
+      const styleAttr = fillStyle ? ` style="${fillStyle}"` : '';
+      svg += `<path class="${cls}"${styleAttr} d="${path}" data-cell="${d}-${habitId}" data-day="${d}" data-habit="${habitId}" />`;
     }
     const labelR = OUTER_R + 16, aMid = (a0+a1)/2;
     const lx = CENTER + labelR * Math.cos(aMid), ly = CENTER + labelR * Math.sin(aMid) + 3.5;
@@ -330,7 +345,10 @@ function render() {
 
   const centerHtml = `<div class="center-month-label"><div class="lbl">MONTH / YEAR</div><div class="mo">${MONTHS_FR[state.month]}</div><div class="yr">${state.year}</div>${totalPossible > 0 ? `<div class="pct">${pct}%</div>` : ''}</div>`;
 
-  app.innerHTML = `<div class="ring-container">${svg}${habitsHtml}${centerHtml}</div><div class="legend"><div class="legend-item"><span class="legend-swatch" style="background:#34c759"></span>Fait</div><div class="legend-item"><span class="legend-swatch" style="background:#ff3b30"></span>Raté</div><div class="legend-item"><span class="legend-swatch" style="background:#f9f9f9;border:1px solid #e5e5ea"></span>Vide</div></div>`;
+  const legendItems = state.habits.map((h, i) =>
+    `<div class="legend-item"><span class="legend-swatch" style="background:${habitColors[i]}"></span>${escapeAttr(h.name.split(' ')[0])}</div>`
+  ).join('') + `<div class="legend-item"><span class="legend-swatch" style="background:#ff3b30"></span>Raté</div>`;
+  app.innerHTML = `<div class="ring-container">${svg}${habitsHtml}${centerHtml}</div><div class="legend">${legendItems}</div>`;
 
   app.querySelectorAll('.cell').forEach(el => {
     if (el.classList.contains('cell-future') || el.classList.contains('cell-future-weekend')) return;
@@ -414,6 +432,7 @@ document.getElementById('nextMonthFocus').addEventListener('click', async () => 
 
 document.getElementById('fabBtn').addEventListener('click', () => {
   if (activeTab === 'stats') openYgAdd();
+  else if (activeTab === 'weekly') openWkAdd();
   else openSettings();
 });
 
@@ -1010,13 +1029,14 @@ async function saveReorder() {
 
 // ── Tab navigation ─────────────────────────────────────────────────────────────
 
-const PAGE_TITLES = { today: "Aujourd'hui", calendar: 'Calendrier', fruits: 'Fruits & Légumes', focus: 'Focus', stats: 'Yearly Habits', more: 'Paramètres' };
+const PAGE_TITLES = { today: 'Daily Tracker', calendar: 'Calendrier', fruits: 'Fruits & Légumes', focus: 'Focus', stats: 'Yearly Habits', weekly: 'Weekly Tracker' };
 
 document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => btn.addEventListener('click', async () => {
   const id = btn.dataset.tab;
   activeTab = id;
 
   if (id === 'more') { openSettings(); return; }
+  if (id === 'weekly') { await loadWeeklyData(); renderWeeklyTracker(); }
 
   const tvBtn = document.getElementById('validateAllTopbar');
   if (tvBtn && id !== 'today') tvBtn.style.display = 'none';
@@ -1044,6 +1064,7 @@ document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => btn.addEventListe
   else if (id === 'calendar') { await loadMonth(); renderCalendarGrid(); }
   else if (id === 'focus') { render(); }
   else if (id === 'stats') { const y = new Date().getFullYear(); await loadYearlyData(y); await loadYearHabitData(y); renderYearlyHabits(); }
+  else if (id === 'weekly') { await loadWeeklyData(); renderWeeklyTracker(); }
 }));
 
 // ── Yearly Goals ──────────────────────────────────────────────────────────────
@@ -1223,6 +1244,99 @@ function renderYearlyHabits() {
       if (!yearlyState.data[gid].books) yearlyState.data[gid].books = Array.from({ length: 12 }, () => ({ title: '', done: false }));
       yearlyState.data[gid].books[bi].title = inp.value;
       await saveYearlyData(year);
+    });
+  });
+}
+
+// ── Weekly Tracker ─────────────────────────────────────────────────────────────
+
+const weeklyState = { activities: [], data: {} };
+const WEEKLY_ACTIVITIES_KEY = 'weekly:activities';
+function weeklyDataKey() {
+  const n = new Date();
+  return `weekly:data:${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
+}
+
+async function loadWeeklyActivities() {
+  try { const r = await window.storage.get(WEEKLY_ACTIVITIES_KEY); weeklyState.activities = r?.value ? JSON.parse(r.value) : []; } catch(e) { weeklyState.activities = []; }
+}
+async function saveWeeklyActivities() {
+  try { await window.storage.set(WEEKLY_ACTIVITIES_KEY, JSON.stringify(weeklyState.activities)); } catch(e) {}
+}
+async function loadWeeklyData() {
+  await loadWeeklyActivities();
+  try { const r = await window.storage.get(weeklyDataKey()); weeklyState.data = r?.value ? JSON.parse(r.value) : {}; } catch(e) { weeklyState.data = {}; }
+}
+async function saveWeeklyData() {
+  try { await window.storage.set(weeklyDataKey(), JSON.stringify(weeklyState.data)); } catch(e) {}
+}
+async function addWeeklyActivity(name, pillar) {
+  if (!name.trim()) return;
+  weeklyState.activities.push({ id: 'wk_' + Date.now().toString(36), name: name.trim(), pillar });
+  await saveWeeklyActivities();
+  renderWeeklyTracker();
+}
+async function deleteWeeklyActivity(id) {
+  weeklyState.activities = weeklyState.activities.filter(a => a.id !== id);
+  delete weeklyState.data[id];
+  await saveWeeklyActivities();
+  await saveWeeklyData();
+  renderWeeklyTracker();
+}
+
+function renderWeeklyTracker() {
+  const container = document.getElementById('weeklyContainer');
+  if (!container) return;
+  const now = new Date();
+  const MONTHS_FULL = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const PILLAR_ICON = { spirit: '🙏', body: '💪', mind: '🧠' };
+  const PILLAR_COL = { spirit: '#FBBF24', body: '#34D399', mind: '#A78BFA' };
+  const WEEK_LABELS = ['S1', 'S2', 'S3', 'S4'];
+
+  let html = `<div class="wk-month-label">${MONTHS_FULL[now.getMonth()]} ${now.getFullYear()}</div>`;
+
+  if (!weeklyState.activities.length) {
+    html += `<div class="wk-empty">Appuie sur + pour ajouter une activité</div>`;
+    container.innerHTML = html;
+    return;
+  }
+
+  html += `<div class="wk-table">
+    <div class="wk-head">
+      <div class="wk-col-name"></div>
+      ${WEEK_LABELS.map(w => `<div class="wk-col-week">${w}</div>`).join('')}
+    </div>`;
+
+  for (const act of weeklyState.activities) {
+    const actData = weeklyState.data[act.id] || {};
+    const col = PILLAR_COL[act.pillar] || '#A78BFA';
+    html += `<div class="wk-row">
+      <div class="wk-col-name">
+        <span class="wk-pillar-dot" style="background:${col}"></span>
+        <span class="wk-act-name">${escapeAttr(act.name)}</span>
+        <button class="wk-del" data-wkid="${act.id}">×</button>
+      </div>
+      ${[1,2,3,4].map(w => {
+        const checked = !!actData[w];
+        return `<div class="wk-col-week"><input type="checkbox" class="wk-cb" ${checked ? 'checked' : ''} data-wkid="${act.id}" data-week="${w}" style="accent-color:${col}"></div>`;
+      }).join('')}
+    </div>`;
+  }
+  html += `</div>`;
+  container.innerHTML = html;
+
+  container.querySelectorAll('.wk-cb').forEach(cb => {
+    cb.addEventListener('change', async () => {
+      const id = cb.dataset.wkid, week = parseInt(cb.dataset.week, 10);
+      if (!weeklyState.data[id]) weeklyState.data[id] = {};
+      weeklyState.data[id][week] = cb.checked;
+      await saveWeeklyData();
+    });
+  });
+
+  container.querySelectorAll('.wk-del').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (confirm('Supprimer cette activité ?')) await deleteWeeklyActivity(btn.dataset.wkid);
     });
   });
 }
@@ -1426,8 +1540,39 @@ window.reloadAppData = async () => {
   await loadHabits();
   await loadMonth();
   await loadYearlyData(new Date().getFullYear());
+  await loadWeeklyData();
   render(); renderCalendarGrid(); renderTodayHabits(); renderWeekStrip();
+  if (activeTab === 'weekly') renderWeeklyTracker();
 };
+
+// ── Add Weekly Activity modal ─────────────────────────────────────────────────
+
+let wkAddPillar = 'spirit';
+
+function openWkAdd() {
+  wkAddPillar = 'spirit';
+  document.getElementById('wkAddName').value = '';
+  document.querySelectorAll('#wkAddBackdrop [data-pillar]').forEach(b => b.classList.toggle('yg-type-active', b.dataset.pillar === wkAddPillar));
+  document.getElementById('wkAddBackdrop').classList.add('open');
+  setTimeout(() => document.getElementById('wkAddName').focus(), 100);
+}
+function closeWkAdd() { document.getElementById('wkAddBackdrop').classList.remove('open'); }
+
+document.getElementById('wkAddBackdrop').addEventListener('click', e => { if (e.target.id === 'wkAddBackdrop') closeWkAdd(); });
+
+document.querySelectorAll('#wkAddBackdrop [data-pillar]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    wkAddPillar = btn.dataset.pillar;
+    document.querySelectorAll('#wkAddBackdrop [data-pillar]').forEach(b => b.classList.toggle('yg-type-active', b.dataset.pillar === wkAddPillar));
+  });
+});
+
+document.getElementById('wkAddConfirm').addEventListener('click', async () => {
+  const name = document.getElementById('wkAddName').value.trim();
+  if (!name) return;
+  await addWeeklyActivity(name, wkAddPillar);
+  closeWkAdd();
+});
 
 // ── Add Yearly Goal modal ────────────────────────────────────────────────────
 
@@ -1471,6 +1616,7 @@ document.getElementById('ygAddConfirm').addEventListener('click', async () => {
   await loadHabits();
   await loadMonth();
   await loadYearlyData(new Date().getFullYear());
+  await loadWeeklyData();
   render();
   renderCalendarGrid();
   renderTodayHabits();

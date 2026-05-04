@@ -28,7 +28,7 @@ window.storage = {
 
 async function pushLocalToSupabase(userId) {
   const keys = Object.keys(localStorage).filter(k =>
-    k.startsWith('habits:') || k.startsWith('fruits:') || k.startsWith('yearly:') || k.startsWith('monthly:')
+    k.startsWith('habits:') || k.startsWith('fruits:') || k.startsWith('yearly:') || k.startsWith('monthly:') || k.startsWith('weekly:')
   );
   if (!keys.length) return;
   const rows = keys.map(key => ({
