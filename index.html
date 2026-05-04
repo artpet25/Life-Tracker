@@ -152,17 +152,17 @@
   .wk-nav-btn { background: white; border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 18px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.09); color: #1c1c1e; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .wk-empty { text-align: center; color: #8e8e93; font-size: 15px; padding: 60px 20px; }
   .wk-table { background: white; border-radius: 20px; margin: 0 16px 14px; box-shadow: 0 2px 16px rgba(0,0,0,0.05); overflow: hidden; }
-  .wk-head { display: grid; grid-template-columns: minmax(0,1fr) repeat(4, 44px); align-items: center; padding: 10px 14px; border-bottom: 2px solid #f2f2f7; background: #fafafa; }
+  .wk-head { display: grid; align-items: center; padding: 10px 14px; border-bottom: 2px solid #f2f2f7; background: #fafafa; }
   .wk-head-lbl { font-size: 10px; font-weight: 700; color: #c7c7cc; text-transform: uppercase; letter-spacing: 0.05em; }
   .wk-col-week { font-size: 12px; font-weight: 700; color: #5856d6; text-align: center; }
-  .wk-row { display: grid; grid-template-columns: minmax(0,1fr) repeat(4, 44px); align-items: center; padding: 11px 14px; border-bottom: 1px solid #f8f8f8; }
+  .wk-row { display: grid; align-items: center; padding: 10px 14px; border-bottom: 1px solid #f8f8f8; min-height: 48px; }
   .wk-row:last-child { border-bottom: none; }
-  .wk-name-cell { display: flex; align-items: center; gap: 8px; min-width: 0; }
-  .wk-pillar-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .wk-act-name { font-size: 14px; font-weight: 600; color: #1c1c1e; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .wk-del { background: none; border: none; color: #c7c7cc; font-size: 18px; cursor: pointer; padding: 0 2px; flex-shrink: 0; line-height: 1; }
+  .wk-name-cell { display: flex; align-items: center; gap: 8px; min-width: 0; padding-right: 4px; }
+  .wk-pillar-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .wk-act-name { font-size: 13px; font-weight: 600; color: #1c1c1e; flex: 1; min-width: 0; line-height: 1.3; word-break: break-word; }
+  .wk-del { background: none; border: none; color: #c7c7cc; font-size: 16px; cursor: pointer; padding: 0 2px; flex-shrink: 0; line-height: 1; }
   .wk-check-cell { display: flex; align-items: center; justify-content: center; }
-  .wk-check-cell input[type="checkbox"] { width: 24px; height: 24px; cursor: pointer; flex-shrink: 0; }
+  .wk-check-cell input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; flex-shrink: 0; }
 
   #ygAddBackdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: flex-end; justify-content: center; z-index: 200; }
   #ygAddBackdrop.open { display: flex; }
@@ -201,7 +201,7 @@
   svg { width: 100%; height: 100%; display: block; }
   .habits-list { position: absolute; left: 0; top: 0; width: 42%; height: 100%; pointer-events: none; z-index: 3; }
   .habit-line { position: absolute; left: 0; width: 100%; height: 0; pointer-events: auto; }
-  .habit-line-inner { display: grid; grid-template-columns: 18px 1fr; align-items: end; gap: 3px; width: 100%; font-size: clamp(11px, 2.6vw, 15px); line-height: 1; transform: translateY(-100%); padding-bottom: 2px; padding-left: 4px; }
+  .habit-line-inner { display: grid; grid-template-columns: 18px 1fr; align-items: center; gap: 3px; width: 100%; font-size: clamp(11px, 2.6vw, 15px); line-height: 1; transform: translateY(-50%); padding-left: 4px; }
   .habit-num { font-weight: 700; text-align: right; padding-right: 2px; font-size: 11px; color: #8e8e93; }
   .habit-name { width: 100%; min-width: 0; font-size: inherit; background: transparent; border: none; color: #1c1c1e; font-weight: 500; padding: 0 2px 1px; }
   .habit-name:focus { outline: none; background: rgba(88,86,214,0.1); border-radius: 4px; }

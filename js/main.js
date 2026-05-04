@@ -338,7 +338,8 @@ function render() {
   for (let i = 0; i < bandCount; i++) {
     const bandIdx = bandCount - 1 - i;
     const bottomRadius = INNER_R + bandIdx * bandW;
-    const topPct = ((CENTER - bottomRadius) / SVG_SIZE) * 100;
+    const midRadius = bottomRadius + bandW / 2;
+    const topPct = ((CENTER - midRadius) / SVG_SIZE) * 100;
     habitsHtml += `<div class="habit-line" style="top:${topPct}%"><div class="habit-line-inner"><span class="habit-num">${i+1}.</span><input class="habit-name" data-habit="${state.habits[i].id}" value="${escapeAttr(state.habits[i].name)}" placeholder="—" /></div></div>`;
   }
   habitsHtml += '</div>';
@@ -1307,22 +1308,26 @@ function renderWeeklyTracker() {
     return;
   }
 
+  const weeksCount = Math.ceil(daysInMonth(year, month) / 7);
+  const weekNums = Array.from({ length: weeksCount }, (_, i) => i + 1);
+  const gridCols = `minmax(0,1fr) repeat(${weeksCount}, 36px)`;
+
   html += `<div class="wk-table">
-    <div class="wk-head">
+    <div class="wk-head" style="grid-template-columns:${gridCols}">
       <div class="wk-head-lbl">Activité</div>
-      <div class="wk-col-week">S1</div><div class="wk-col-week">S2</div><div class="wk-col-week">S3</div><div class="wk-col-week">S4</div>
+      ${weekNums.map(w => `<div class="wk-col-week">S${w}</div>`).join('')}
     </div>`;
 
   for (const act of weeklyState.activities) {
     const actData = weeklyState.data[act.id] || {};
     const col = PILLAR_COL[act.pillar] || '#A78BFA';
-    html += `<div class="wk-row">
+    html += `<div class="wk-row" style="grid-template-columns:${gridCols}">
       <div class="wk-name-cell">
         <span class="wk-pillar-dot" style="background:${col}"></span>
         <span class="wk-act-name">${escapeAttr(act.name)}</span>
         <button class="wk-del" data-wkid="${act.id}">×</button>
       </div>
-      ${[1,2,3,4].map(w => {
+      ${weekNums.map(w => {
         const checked = !!actData[w];
         return `<div class="wk-check-cell"><input type="checkbox" class="wk-cb" ${checked ? 'checked' : ''} data-wkid="${act.id}" data-week="${w}" style="accent-color:${col}"></div>`;
       }).join('')}
