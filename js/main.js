@@ -1368,7 +1368,7 @@ function renderWeeklyTracker() {
 
   // Swipe-to-delete
   let openSlide = null;
-  const SWIPE_MAX = 80, SWIPE_OPEN = 50;
+  const SWIPE_MAX = 64, SWIPE_OPEN = 40;
   container.querySelectorAll('.wk-row-wrap').forEach(wrap => {
     const slide = wrap.querySelector('.wk-row-slide');
     let startX = 0, startY = 0, tracking = false;
