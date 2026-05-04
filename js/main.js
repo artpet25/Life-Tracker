@@ -1031,7 +1031,17 @@ async function saveReorder() {
 
 // ── Tab navigation ─────────────────────────────────────────────────────────────
 
-const PAGE_TITLES = { today: 'Daily Tracker', calendar: 'Calendrier', fruits: 'Fruits & Légumes', focus: 'Focus', stats: 'Yearly Habits', weekly: 'Weekly Tracker' };
+const PAGE_TITLES = { today: 'Daily Habits', calendar: 'Calendrier', fruits: 'Fruits & Légumes', focus: 'Focus', stats: 'Yearly Habits', weekly: 'Weekly Tracker' };
+const DAYS_FR = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+const MONTHS_FR_LONG = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+function todayDateLabel() {
+  const d = new Date();
+  return `${DAYS_FR[d.getDay()]} ${d.getDate()} ${MONTHS_FR_LONG[d.getMonth()]}`;
+}
+function setPageSubtitle(text) {
+  const el = document.getElementById('pageSubtitle');
+  if (el) el.textContent = text;
+}
 
 document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => btn.addEventListener('click', async () => {
   const id = btn.dataset.tab;
@@ -1052,6 +1062,7 @@ document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => btn.addEventListe
 
   const pageTitleEl = document.getElementById('pageTitle');
   if (pageTitleEl) pageTitleEl.textContent = PAGE_TITLES[id] || '';
+  setPageSubtitle(id === 'today' ? todayDateLabel() : '');
 
   if (id === 'fruits') { await loadFruits(); renderFruits(); }
   else if (id === 'today') {
@@ -1321,16 +1332,18 @@ function renderWeeklyTracker() {
   for (const act of weeklyState.activities) {
     const actData = weeklyState.data[act.id] || {};
     const col = PILLAR_COL[act.pillar] || '#A78BFA';
-    html += `<div class="wk-row" style="grid-template-columns:${gridCols}">
-      <div class="wk-name-cell">
-        <span class="wk-pillar-dot" style="background:${col}"></span>
-        <span class="wk-act-name">${escapeAttr(act.name)}</span>
-        <button class="wk-del" data-wkid="${act.id}">×</button>
+    html += `<div class="wk-row-wrap">
+      <div class="wk-row-slide" style="grid-template-columns:${gridCols}">
+        <div class="wk-name-cell">
+          <span class="wk-pillar-dot" style="background:${col}"></span>
+          <span class="wk-act-name">${escapeAttr(act.name)}</span>
+        </div>
+        ${weekNums.map(w => {
+          const checked = !!actData[w];
+          return `<div class="wk-check-cell"><input type="checkbox" class="wk-cb" ${checked ? 'checked' : ''} data-wkid="${act.id}" data-week="${w}" style="accent-color:${col}"></div>`;
+        }).join('')}
       </div>
-      ${weekNums.map(w => {
-        const checked = !!actData[w];
-        return `<div class="wk-check-cell"><input type="checkbox" class="wk-cb" ${checked ? 'checked' : ''} data-wkid="${act.id}" data-week="${w}" style="accent-color:${col}"></div>`;
-      }).join('')}
+      <button class="wk-del-btn" data-wkid="${act.id}">Supprimer</button>
     </div>`;
   }
   html += `</div>`;
@@ -1349,10 +1362,43 @@ function renderWeeklyTracker() {
     });
   });
 
-  container.querySelectorAll('.wk-del').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (confirm('Supprimer cette activité ?')) await deleteWeeklyActivity(btn.dataset.wkid);
-    });
+  container.querySelectorAll('.wk-del-btn').forEach(btn => {
+    btn.addEventListener('click', async () => { await deleteWeeklyActivity(btn.dataset.wkid); });
+  });
+
+  // Swipe-to-delete
+  let openSlide = null;
+  const SWIPE_MAX = 90, SWIPE_OPEN = 55;
+  container.querySelectorAll('.wk-row-wrap').forEach(wrap => {
+    const slide = wrap.querySelector('.wk-row-slide');
+    let startX = 0, startY = 0, tracking = false;
+    wrap.addEventListener('touchstart', e => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      tracking = false;
+      if (openSlide && openSlide !== slide) {
+        openSlide.style.transition = 'transform 0.25s ease';
+        openSlide.style.transform = '';
+        openSlide = null;
+      }
+    }, { passive: true });
+    wrap.addEventListener('touchmove', e => {
+      const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      if (!tracking && Math.abs(dy) > Math.abs(dx)) return;
+      tracking = true;
+      if (dx < 0) {
+        slide.style.transition = 'none';
+        slide.style.transform = `translateX(${Math.max(dx, -SWIPE_MAX)}px)`;
+      }
+    }, { passive: true });
+    wrap.addEventListener('touchend', e => {
+      if (!tracking) return;
+      const dx = e.changedTouches[0].clientX - startX;
+      slide.style.transition = 'transform 0.25s ease';
+      if (dx < -SWIPE_OPEN) { slide.style.transform = `translateX(-${SWIPE_MAX}px)`; openSlide = slide; }
+      else { slide.style.transform = ''; openSlide = null; }
+    }, { passive: true });
   });
 }
 
@@ -1642,6 +1688,7 @@ document.getElementById('ygAddConfirm').addEventListener('click', async () => {
   await loadMonth();
   await loadYearlyData(new Date().getFullYear());
   await loadWeeklyData();
+  setPageSubtitle(todayDateLabel());
   render();
   renderCalendarGrid();
   renderTodayHabits();
