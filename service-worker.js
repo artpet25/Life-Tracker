@@ -1,4 +1,4 @@
-const CACHE = 'life-tracker-v35';
+const CACHE = 'life-tracker-v36';
 const ASSETS = [
   './',
   './index.html',

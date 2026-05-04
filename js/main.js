@@ -916,6 +916,7 @@ function renderTodayHabits() {
       if (!dataAvailable) return;
       e.preventDefault();
       e.stopPropagation();
+      navigator.vibrate?.(20);
       const card = btn.closest('.habit-card');
       const habitId = btn.dataset.habit;
       btn.classList.add('animating');
@@ -1250,11 +1251,10 @@ function renderYearlyHabits() {
 
 // ── Weekly Tracker ─────────────────────────────────────────────────────────────
 
-const weeklyState = { activities: [], data: {} };
+const weeklyState = { activities: [], data: {}, year: new Date().getFullYear(), month: new Date().getMonth() };
 const WEEKLY_ACTIVITIES_KEY = 'weekly:activities';
-function weeklyDataKey() {
-  const n = new Date();
-  return `weekly:data:${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
+function weeklyDataKey(y, m) {
+  return `weekly:data:${y}-${String(m + 1).padStart(2, '0')}`;
 }
 
 async function loadWeeklyActivities() {
@@ -1265,10 +1265,12 @@ async function saveWeeklyActivities() {
 }
 async function loadWeeklyData() {
   await loadWeeklyActivities();
-  try { const r = await window.storage.get(weeklyDataKey()); weeklyState.data = r?.value ? JSON.parse(r.value) : {}; } catch(e) { weeklyState.data = {}; }
+  const n = new Date();
+  weeklyState.year = n.getFullYear(); weeklyState.month = n.getMonth();
+  try { const r = await window.storage.get(weeklyDataKey(weeklyState.year, weeklyState.month)); weeklyState.data = r?.value ? JSON.parse(r.value) : {}; } catch(e) { weeklyState.data = {}; }
 }
 async function saveWeeklyData() {
-  try { await window.storage.set(weeklyDataKey(), JSON.stringify(weeklyState.data)); } catch(e) {}
+  try { await window.storage.set(weeklyDataKey(weeklyState.year, weeklyState.month), JSON.stringify(weeklyState.data)); } catch(e) {}
 }
 async function addWeeklyActivity(name, pillar) {
   if (!name.trim()) return;
@@ -1287,46 +1289,54 @@ async function deleteWeeklyActivity(id) {
 function renderWeeklyTracker() {
   const container = document.getElementById('weeklyContainer');
   if (!container) return;
-  const now = new Date();
+  const { year, month } = weeklyState;
   const MONTHS_FULL = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-  const PILLAR_ICON = { spirit: '🙏', body: '💪', mind: '🧠' };
   const PILLAR_COL = { spirit: '#FBBF24', body: '#34D399', mind: '#A78BFA' };
-  const WEEK_LABELS = ['S1', 'S2', 'S3', 'S4'];
 
-  let html = `<div class="wk-month-label">${MONTHS_FULL[now.getMonth()]} ${now.getFullYear()}</div>`;
+  let html = `<div class="wk-nav-row">
+    <button class="wk-nav-btn" id="wkPrevMonth">‹</button>
+    <span class="wk-month-label">${MONTHS_FULL[month]} ${year}</span>
+    <button class="wk-nav-btn" id="wkNextMonth">›</button>
+  </div>`;
 
   if (!weeklyState.activities.length) {
     html += `<div class="wk-empty">Appuie sur + pour ajouter une activité</div>`;
     container.innerHTML = html;
+    container.querySelector('#wkPrevMonth').addEventListener('click', () => wkNavigate(-1));
+    container.querySelector('#wkNextMonth').addEventListener('click', () => wkNavigate(1));
     return;
   }
 
   html += `<div class="wk-table">
     <div class="wk-head">
-      <div class="wk-col-name"></div>
-      ${WEEK_LABELS.map(w => `<div class="wk-col-week">${w}</div>`).join('')}
+      <div class="wk-head-lbl">Activité</div>
+      <div class="wk-col-week">S1</div><div class="wk-col-week">S2</div><div class="wk-col-week">S3</div><div class="wk-col-week">S4</div>
     </div>`;
 
   for (const act of weeklyState.activities) {
     const actData = weeklyState.data[act.id] || {};
     const col = PILLAR_COL[act.pillar] || '#A78BFA';
     html += `<div class="wk-row">
-      <div class="wk-col-name">
+      <div class="wk-name-cell">
         <span class="wk-pillar-dot" style="background:${col}"></span>
         <span class="wk-act-name">${escapeAttr(act.name)}</span>
         <button class="wk-del" data-wkid="${act.id}">×</button>
       </div>
       ${[1,2,3,4].map(w => {
         const checked = !!actData[w];
-        return `<div class="wk-col-week"><input type="checkbox" class="wk-cb" ${checked ? 'checked' : ''} data-wkid="${act.id}" data-week="${w}" style="accent-color:${col}"></div>`;
+        return `<div class="wk-check-cell"><input type="checkbox" class="wk-cb" ${checked ? 'checked' : ''} data-wkid="${act.id}" data-week="${w}" style="accent-color:${col}"></div>`;
       }).join('')}
     </div>`;
   }
   html += `</div>`;
   container.innerHTML = html;
 
+  container.querySelector('#wkPrevMonth').addEventListener('click', () => wkNavigate(-1));
+  container.querySelector('#wkNextMonth').addEventListener('click', () => wkNavigate(1));
+
   container.querySelectorAll('.wk-cb').forEach(cb => {
     cb.addEventListener('change', async () => {
+      navigator.vibrate?.(30);
       const id = cb.dataset.wkid, week = parseInt(cb.dataset.week, 10);
       if (!weeklyState.data[id]) weeklyState.data[id] = {};
       weeklyState.data[id][week] = cb.checked;
@@ -1339,6 +1349,16 @@ function renderWeeklyTracker() {
       if (confirm('Supprimer cette activité ?')) await deleteWeeklyActivity(btn.dataset.wkid);
     });
   });
+}
+
+async function wkNavigate(dir) {
+  let m = weeklyState.month + dir;
+  let y = weeklyState.year;
+  if (m < 0) { m = 11; y--; }
+  if (m > 11) { m = 0; y++; }
+  weeklyState.month = m; weeklyState.year = y;
+  try { const r = await window.storage.get(weeklyDataKey(y, m)); weeklyState.data = r?.value ? JSON.parse(r.value) : {}; } catch(e) { weeklyState.data = {}; }
+  renderWeeklyTracker();
 }
 
 // ── Fruits ─────────────────────────────────────────────────────────────────────
