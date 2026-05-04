@@ -1343,7 +1343,7 @@ function renderWeeklyTracker() {
           return `<div class="wk-check-cell"><input type="checkbox" class="wk-cb" ${checked ? 'checked' : ''} data-wkid="${act.id}" data-week="${w}" style="accent-color:${col}"></div>`;
         }).join('')}
       </div>
-      <button class="wk-del-btn" data-wkid="${act.id}">Supprimer</button>
+      <button class="wk-del-btn" data-wkid="${act.id}">🗑</button>
     </div>`;
   }
   html += `</div>`;
@@ -1368,7 +1368,7 @@ function renderWeeklyTracker() {
 
   // Swipe-to-delete
   let openSlide = null;
-  const SWIPE_MAX = 90, SWIPE_OPEN = 55;
+  const SWIPE_MAX = 80, SWIPE_OPEN = 50;
   container.querySelectorAll('.wk-row-wrap').forEach(wrap => {
     const slide = wrap.querySelector('.wk-row-slide');
     let startX = 0, startY = 0, tracking = false;
