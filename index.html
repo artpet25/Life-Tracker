@@ -121,15 +121,26 @@
   .yg2-ring-pct { font-size: 36px; font-weight: 800; color: #1c1c1e; letter-spacing: -1px; line-height: 1; }
   .yg2-ring-label { font-size: 17px; font-weight: 700; color: #1c1c1e; }
   .yg2-section-label { font-size: 12px; font-weight: 700; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.06em; margin: 6px 0 8px; }
-  .yg2-card { background: white; border-radius: 20px; padding: 16px 18px 14px; margin-bottom: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
-  .yg2-card-main { cursor: pointer; user-select: none; -webkit-user-select: none; }
+  /* Grid layout */
+  .yg2-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  /* Mini ring cards (2 per row) */
+  .yg2-mini-ring-card { background: white; border-radius: 20px; padding: 16px 12px 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; user-select: none; -webkit-user-select: none; }
+  .yg2-mini-ring-wrap { position: relative; width: 86px; height: 86px; flex-shrink: 0; }
+  .yg2-mini-ring-svg { width: 86px; height: 86px; display: block; }
+  .yg2-mini-ring-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; }
+  .yg2-mini-pct { font-size: 18px; font-weight: 800; color: #1c1c1e; letter-spacing: -0.5px; line-height: 1; }
+  .yg2-mini-name { font-size: 12px; font-weight: 600; color: #1c1c1e; text-align: center; line-height: 1.35; width: 100%; }
+  .yg2-mini-ring-card .yg-detail { background: #f2f2f7; border-radius: 12px; margin-top: 8px; border-top: none; padding: 12px 14px; width: 100%; }
+  /* Full-width bar cards */
+  .yg2-bar-card { background: white; border-radius: 20px; padding: 16px 18px 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); grid-column: span 2; }
+  .yg2-bar-card-main { cursor: pointer; user-select: none; -webkit-user-select: none; }
   .yg2-card-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 11px; }
   .yg2-card-name { font-size: 15px; font-weight: 600; color: #1c1c1e; flex: 1; padding-right: 8px; }
   .yg2-card-chevron { font-size: 13px; color: #8e8e93; margin-left: 4px; flex-shrink: 0; }
   .yg2-card-pct { font-size: 16px; font-weight: 800; color: #1c1c1e; flex-shrink: 0; }
-  .yg2-bar { height: 10px; background: rgba(0,0,0,0.12); border-radius: 10px; overflow: hidden; }
+  .yg2-bar { height: 10px; background: rgba(0,0,0,0.10); border-radius: 10px; overflow: hidden; }
   .yg2-bar-fill { height: 100%; border-radius: 10px; transition: width 0.4s ease; }
-  .yg2-card .yg-detail { background: #f2f2f7; border-radius: 12px; margin-top: 12px; border-top: none; padding: 12px 14px; }
+  .yg2-bar-card .yg-detail { background: #f2f2f7; border-radius: 12px; margin-top: 12px; border-top: none; padding: 12px 14px; }
   .yg-slider { width: 100%; accent-color: #5856d6; cursor: pointer; display: block; }
   .yg-slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: #8e8e93; margin-top: 4px; }
   .yg-subtasks { display: flex; flex-direction: column; gap: 10px; }
