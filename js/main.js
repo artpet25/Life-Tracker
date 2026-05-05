@@ -65,6 +65,7 @@ const YEARLY_GOALS = [
 function yearlyDataKey(y) { return `yearly:v1:${y}`; }
 const yearlyState = { data: {}, yearHabitData: {}, custom: [] };
 const ygExpanded = new Set();
+const ygPillarExpanded = new Set(['spirit', 'body', 'mind']);
 
 async function loadYearlyData(y) {
   try {
@@ -1126,100 +1127,111 @@ function renderYearlyHabits() {
   const container = document.getElementById('statsMonthlyContainer');
   if (!container) return;
   const year = new Date().getFullYear();
-  const PILLAR_LABELS = { spirit: '🙏 Spirit', body: '💪 Body', mind: '🧠 Mind' };
-  const PILLAR_GRADS = {
-    spirit: 'linear-gradient(to right, #FBBF24, #F97316)',
-    body:   'linear-gradient(to right, #34D399, #06B6D4)',
-    mind:   'linear-gradient(to right, #A78BFA, #C084FC)',
+  const PILLAR_INFO = {
+    spirit: { label: 'Spirit', emoji: '🙏', ring: '#F97316', grad: 'linear-gradient(to right, #FBBF24, #F97316)' },
+    body:   { label: 'Body',   emoji: '💪', ring: '#06B6D4', grad: 'linear-gradient(to right, #34D399, #06B6D4)' },
+    mind:   { label: 'Mind',   emoji: '🧠', ring: '#A78BFA', grad: 'linear-gradient(to right, #A78BFA, #C084FC)' },
   };
   const allGoals = [...YEARLY_GOALS, ...yearlyState.custom];
   const totalPct = allGoals.length
     ? Math.round(allGoals.reduce((sum, g) => sum + calcGoalProgress(g, year), 0) / allGoals.length)
     : 0;
-
-  const PILLAR_RING_COLORS = {
-    spirit: '#F97316',
-    body:   '#06B6D4',
-    mind:   '#A78BFA',
-  };
-  const CIRC = 263.89;   // 2π×42
-  const SCIRC = 213.63;  // 2π×34
-  const ringOffset = (CIRC * (1 - totalPct / 100)).toFixed(2);
-  const ringStroke = totalPct === 100 ? '#34c759' : 'url(#ygRingGrad)';
+  const SCIRC = 213.63; // 2π×34
+  const TCIRC = 238.76; // 2π×38
+  const topOff = (TCIRC * (1 - totalPct / 100)).toFixed(2);
+  const topStroke = totalPct === 100 ? '#34c759' : 'url(#ygTopGrad)';
 
   let html = `<div class="yg2-container">
-  <div class="yg2-year-header">${year}</div>
-  <div class="yg2-ring-card">
-    <div class="yg2-ring-wrap">
-      <svg class="yg2-ring-svg" viewBox="0 0 100 100">
-        <defs>
-          <linearGradient id="ygRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#5856d6"/>
-            <stop offset="100%" stop-color="#06B6D4"/>
-          </linearGradient>
-        </defs>
-        <circle cx="50" cy="50" r="42" stroke="#e8e8ed" stroke-width="9" fill="none"/>
-        <circle cx="50" cy="50" r="42" stroke="${ringStroke}" stroke-width="9" fill="none"
-          stroke-dasharray="${CIRC}" stroke-dashoffset="${ringOffset}" stroke-linecap="round"
-          transform="rotate(-90 50 50)"/>
-      </svg>
-      <div class="yg2-ring-center">
-        <div class="yg2-ring-pct">${totalPct}%</div>
+  <div class="yg2-header-row">
+    <div class="yg2-year-header">${year}</div>
+    <div class="yg2-top-ring">
+      <div class="yg2-top-ring-wrap">
+        <svg class="yg2-top-ring-svg" viewBox="0 0 100 100">
+          <defs>
+            <linearGradient id="ygTopGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#5856d6"/>
+              <stop offset="100%" stop-color="#06B6D4"/>
+            </linearGradient>
+          </defs>
+          <circle cx="50" cy="50" r="38" stroke="#e8e8ed" stroke-width="14" fill="none"/>
+          <circle cx="50" cy="50" r="38" stroke="${topStroke}" stroke-width="14" fill="none"
+            stroke-dasharray="${TCIRC}" stroke-dashoffset="${topOff}" stroke-linecap="round"
+            transform="rotate(-90 50 50)"/>
+        </svg>
+        <div class="yg2-top-ring-center"><span class="yg2-top-ring-pct">${totalPct}%</span></div>
       </div>
+      <div class="yg2-top-ring-label">Progression</div>
     </div>
-    <div class="yg2-ring-label">Progression ${year}</div>
   </div>`;
 
   for (const pillar of ['spirit', 'body', 'mind']) {
+    const info = PILLAR_INFO[pillar];
     const goals = [
       ...YEARLY_GOALS.filter(g => g.pillar === pillar),
       ...yearlyState.custom.filter(g => g.pillar === pillar),
     ];
     if (!goals.length) continue;
-    const ringColor = PILLAR_RING_COLORS[pillar];
-    const grad = PILLAR_GRADS[pillar];
-    html += `<div class="yg2-section-label">${PILLAR_LABELS[pillar]}</div><div class="yg2-grid">`;
-    for (const goal of goals) {
-      const pct = calcGoalProgress(goal, year);
-      const isExpanded = ygExpanded.has(goal.id);
-      const canExpand = goal.type !== 'habit-link' && goal.type !== 'fruits-link';
-      const isRingCard = goal.type === 'slider' || goal.type === 'habit-link' || goal.type === 'fruits-link';
-      if (isRingCard) {
-        const sOff = (SCIRC * (1 - pct / 100)).toFixed(2);
-        const sStroke = pct === 100 ? '#34c759' : ringColor;
-        html += `<div class="yg2-mini-ring-card" data-gid="${goal.id}"${canExpand ? ` data-expand="${goal.id}"` : ''}>
-          <div class="yg2-mini-ring-wrap">
-            <svg class="yg2-mini-ring-svg" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="34" stroke="#e8e8ed" stroke-width="12" fill="none"/>
-              <circle cx="50" cy="50" r="34" stroke="${sStroke}" stroke-width="12" fill="none"
-                stroke-dasharray="${SCIRC}" stroke-dashoffset="${sOff}" stroke-linecap="round"
-                transform="rotate(-90 50 50)"/>
-            </svg>
-            <div class="yg2-mini-ring-center">
-              <span id="yg-pct-${goal.id}" class="yg2-mini-pct">${pct}%</span>
+    const pillarPct = Math.round(goals.reduce((s, g) => s + calcGoalProgress(g, year), 0) / goals.length);
+    const isOpen = ygPillarExpanded.has(pillar);
+    html += `<div class="yg2-pillar-card">
+      <div class="yg2-pillar-header" data-toggle-pillar="${pillar}">
+        <span class="yg2-pillar-emoji">${info.emoji}</span>
+        <span class="yg2-pillar-name">${info.label}</span>
+        <span class="yg2-pillar-pct">${pillarPct}%</span>
+        <span class="yg2-pillar-chevron">${isOpen ? '▾' : '›'}</span>
+      </div>`;
+    if (isOpen) {
+      html += `<div class="yg2-pillar-body"><div class="yg2-grid">`;
+      for (const goal of goals) {
+        const pct = calcGoalProgress(goal, year);
+        const isExpanded = ygExpanded.has(goal.id);
+        const canExpand = goal.type !== 'habit-link' && goal.type !== 'fruits-link';
+        const isRingCard = goal.type === 'slider' || goal.type === 'habit-link' || goal.type === 'fruits-link';
+        if (isRingCard) {
+          const sOff = (SCIRC * (1 - pct / 100)).toFixed(2);
+          const sStroke = pct === 100 ? '#34c759' : info.ring;
+          html += `<div class="yg2-mini-ring-card" data-gid="${goal.id}"${canExpand ? ` data-expand="${goal.id}"` : ''}>
+            <div class="yg2-mini-ring-wrap">
+              <svg class="yg2-mini-ring-svg" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="34" stroke="#e8e8ed" stroke-width="12" fill="none"/>
+                <circle cx="50" cy="50" r="34" stroke="${sStroke}" stroke-width="12" fill="none"
+                  stroke-dasharray="${SCIRC}" stroke-dashoffset="${sOff}" stroke-linecap="round"
+                  transform="rotate(-90 50 50)"/>
+              </svg>
+              <div class="yg2-mini-ring-center"><span id="yg-pct-${goal.id}" class="yg2-mini-pct">${pct}%</span></div>
             </div>
-          </div>
-          <div class="yg2-mini-name">${escapeAttr(goal.name)}</div>
-          ${isExpanded ? ygDetailHtml(goal) : ''}
-        </div>`;
-      } else {
-        html += `<div class="yg2-bar-card" data-gid="${goal.id}">
-          <div class="yg2-bar-card-main"${canExpand ? ` data-expand="${goal.id}"` : ''}>
-            <div class="yg2-card-top">
-              <span class="yg2-card-name">${escapeAttr(goal.name)}</span>
-              ${canExpand ? `<span class="yg2-card-chevron">${isExpanded ? '▾' : '›'}</span>` : ''}
-              <span id="yg-pct-${goal.id}" class="yg2-card-pct">${pct}%</span>
+            <div class="yg2-mini-name">${escapeAttr(goal.name)}</div>
+            ${isExpanded ? ygDetailHtml(goal) : ''}
+          </div>`;
+        } else {
+          html += `<div class="yg2-bar-card" data-gid="${goal.id}">
+            <div class="yg2-bar-card-main"${canExpand ? ` data-expand="${goal.id}"` : ''}>
+              <div class="yg2-card-top">
+                <span class="yg2-card-name">${escapeAttr(goal.name)}</span>
+                ${canExpand ? `<span class="yg2-card-chevron">${isExpanded ? '▾' : '›'}</span>` : ''}
+                <span id="yg-pct-${goal.id}" class="yg2-card-pct">${pct}%</span>
+              </div>
+              <div class="yg2-bar"><div class="yg2-bar-fill" id="yg-fill-${goal.id}" style="width:${pct}%;background:${info.grad}"></div></div>
             </div>
-            <div class="yg2-bar"><div class="yg2-bar-fill" id="yg-fill-${goal.id}" style="width:${pct}%;background:${grad}"></div></div>
-          </div>
-          ${isExpanded ? ygDetailHtml(goal) : ''}
-        </div>`;
+            ${isExpanded ? ygDetailHtml(goal) : ''}
+          </div>`;
+        }
       }
+      html += `</div></div>`;
     }
     html += `</div>`;
   }
   html += `</div>`;
   container.innerHTML = html;
+
+  // Toggle pillar open/close
+  container.querySelectorAll('[data-toggle-pillar]').forEach(el => {
+    el.addEventListener('click', () => {
+      const p = el.dataset.togglePillar;
+      ygPillarExpanded.has(p) ? ygPillarExpanded.delete(p) : ygPillarExpanded.add(p);
+      renderYearlyHabits();
+    });
+  });
 
   // Expand / collapse
   container.querySelectorAll('[data-expand]').forEach(el => {
