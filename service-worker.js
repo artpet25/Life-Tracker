@@ -1,4 +1,4 @@
-const CACHE = 'life-tracker-v46';
+const CACHE = 'life-tracker-v47';
 const ASSETS = [
   './',
   './index.html',
@@ -23,6 +23,7 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  if (!e.request.url.startsWith(self.location.origin)) return;
   e.respondWith(
     fetch(e.request).catch(() => caches.match(e.request))
   );

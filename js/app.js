@@ -41,7 +41,9 @@ async function pushLocalToSupabase(userId) {
 async function pullSupabaseToLocal(userId) {
   const { data } = await _supa.from('user_storage').select('key,value').eq('user_id', userId).catch(() => ({ data: null }));
   if (!data?.length) return false;
-  data.forEach(row => localStorage.setItem(row.key, row.value));
+  const ALLOWED = ['habits:', 'fruits:', 'yearly:', 'monthly:', 'weekly:'];
+  data.filter(row => row.key && ALLOWED.some(p => row.key.startsWith(p)))
+      .forEach(row => localStorage.setItem(row.key, row.value));
   return true;
 }
 
@@ -87,7 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('authSendBtn')?.addEventListener('click', async () => {
     const email = document.getElementById('authEmail')?.value.trim();
     if (!email) return;
-    localStorage.setItem('auth:email', email);
     const btn = document.getElementById('authSendBtn');
     btn.disabled = true; btn.textContent = '…';
     const { error } = await _supa.auth.signInWithOtp({

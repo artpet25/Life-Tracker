@@ -220,7 +220,9 @@ async function loadMonthlyData(y, m) {
 }
 async function saveMonthlyData(y, m) { try { await window.storage.set(monthlyDataKey(y, m), JSON.stringify(monthlyState.data)); } catch(e) {} }
 function daysInMonth(y, m) { return new Date(y, m+1, 0).getDate(); }
-function escapeAttr(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function escapeAttr(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+const VALID_PILLARS = new Set(['body', 'mind', 'spirit']);
+function sanitizePillar(p) { return VALID_PILLARS.has(p) ? p : 'body'; }
 
 function arcPath(cx, cy, r0, r1, a0, a1) {
   const x0O=cx+r1*Math.cos(a0), y0O=cy+r1*Math.sin(a0);
@@ -236,7 +238,10 @@ async function loadHabits() {
     const r = await window.storage.get(HABITS_KEY);
     if (r?.value) {
       const p = JSON.parse(r.value);
-      if (Array.isArray(p) && p.length >= MIN_HABITS && p[0]?.id) { state.habits = p; return; }
+      if (Array.isArray(p) && p.length >= MIN_HABITS && p[0]?.id) {
+        state.habits = p.map(h => ({ ...h, pillar: sanitizePillar(h.pillar) }));
+        return;
+      }
     }
     // Migrate from v6 (string array → {id,name}[])
     const old = await window.storage.get(HABITS_KEY_OLD);
@@ -838,7 +843,7 @@ function getHabitVisual(name, index, pillarOverride) {
     if (/prière|priere|prayer|médit|meditat|yoga|bienveill|kindn|inspir|famille|family|ami|friend|proch/.test(n)) return 'spirit';
     return defaults[index % defaults.length].pillar;
   })();
-  return { pillar: pillarOverride || autoPillar, emoji: emoji || defaults[index % defaults.length].emoji };
+  return { pillar: sanitizePillar(pillarOverride || autoPillar), emoji: emoji || defaults[index % defaults.length].emoji };
 }
 
 async function validateAllHabits(day) {
@@ -890,7 +895,7 @@ function renderTodayHabits() {
       <div class="habit-card-icon" style="background:${iconBg}">${v.emoji}</div>
       <div class="habit-card-body">
         <div class="habit-card-name${isDone ? ' done-name' : isMissed ? ' missed-name' : ''}">${escapeAttr(h.name)}</div>
-        <div class="habit-card-meta"><span class="pillar-tag pillar-${v.pillar}">${pillLabel}</span></div>
+        <div class="habit-card-meta"><span class="pillar-tag pillar-${escapeAttr(v.pillar)}">${pillLabel}</span></div>
       </div>
       <button class="habit-card-btn${isDone ? ' done-btn' : isMissed ? ' missed-btn' : ''}" data-habit="${h.id}">${isDone ? '✓' : isMissed ? '✗' : ''}</button>
     </div>`;
