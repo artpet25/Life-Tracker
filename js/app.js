@@ -4,9 +4,12 @@ const SUPABASE_URL = 'https://xrmezfmvtqeysgoavxfh.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhybWV6Zm12dHFleXNnb2F2eGZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNTg0OTYsImV4cCI6MjA5MjkzNDQ5Nn0.cxzy8d37SFMaE4L_ZGEij-FicmKCqsbzk_33v_8iZGg';
 
 const _supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-let _user = null;
 
-// ── Storage : localStorage (fast/offline) + Supabase sync ────────────────────
+const SYNC_ROW_ID = 'main';
+const ALLOWED_PREFIXES = ['habits:', 'fruits:', 'yearly:', 'monthly:', 'weekly:'];
+let _syncTimer = null;
+
+// ── Storage : localStorage + debounced Supabase JSON sync ────────────────────
 
 window.storage = {
   get: async (key) => {
@@ -15,103 +18,57 @@ window.storage = {
   },
   set: async (key, value) => {
     localStorage.setItem(key, value);
-    if (_user) {
-      _supa.from('user_storage')
-        .upsert({ user_id: _user.id, key, value, updated_at: new Date().toISOString() },
-                { onConflict: 'user_id,key' })
-        .then(({ error }) => { if (error) console.error('[Supabase] write error:', error.message); });
-    }
+    schedulePush();
   }
 };
 
-// ── Sync helpers ─────────────────────────────────────────────────────────────
-
-async function pushLocalToSupabase(userId) {
-  const keys = Object.keys(localStorage).filter(k =>
-    k.startsWith('habits:') || k.startsWith('fruits:') || k.startsWith('yearly:') || k.startsWith('monthly:') || k.startsWith('weekly:')
-  );
-  if (!keys.length) return;
-  const rows = keys.map(key => ({
-    user_id: userId, key, value: localStorage.getItem(key),
-    updated_at: new Date().toISOString()
-  }));
-  await _supa.from('user_storage').upsert(rows, { onConflict: 'user_id,key' }).catch(() => {});
+function schedulePush() {
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(pushToSupabase, 2000);
 }
 
-async function pullSupabaseToLocal(userId) {
-  const { data } = await _supa.from('user_storage').select('key,value').eq('user_id', userId).catch(() => ({ data: null }));
-  if (!data?.length) return false;
-  const ALLOWED = ['habits:', 'fruits:', 'yearly:', 'monthly:', 'weekly:'];
-  data.filter(row => row.key && ALLOWED.some(p => row.key.startsWith(p)))
-      .forEach(row => localStorage.setItem(row.key, row.value));
+async function pushToSupabase() {
+  const data = {};
+  Object.keys(localStorage)
+    .filter(k => ALLOWED_PREFIXES.some(p => k.startsWith(p)))
+    .forEach(k => { data[k] = localStorage.getItem(k); });
+
+  const { error } = await _supa
+    .from('app_data')
+    .upsert({ id: SYNC_ROW_ID, data, updated_at: new Date().toISOString() });
+  if (error) console.error('[Supabase] push error:', error.message);
+  else console.log('[Supabase] synced', Object.keys(data).length, 'keys');
+}
+
+async function pullFromSupabase() {
+  const { data: row, error } = await _supa
+    .from('app_data')
+    .select('data')
+    .eq('id', SYNC_ROW_ID)
+    .single();
+
+  if (error || !row?.data) return false;
+
+  Object.entries(row.data).forEach(([key, value]) => {
+    if (ALLOWED_PREFIXES.some(p => key.startsWith(p))) {
+      localStorage.setItem(key, value);
+    }
+  });
   return true;
 }
 
-async function onLogin(user) {
-  _user = user;
+// ── Init ──────────────────────────────────────────────────────────────────────
 
-  // Supabase = source de vérité : on tire toujours les dernières données
-  const pulled = await pullSupabaseToLocal(user.id);
+async function initSync() {
+  const pulled = await pullFromSupabase();
   if (pulled && window.reloadAppData) await window.reloadAppData();
 
-  document.getElementById('authOverlay')?.style.setProperty('display', 'none');
-  updateAuthUI(user.email);
-}
-
-function updateAuthUI(email) {
-  const el = document.getElementById('authUserEmail');
-  if (el) el.textContent = email || '';
-  const loginBtn = document.getElementById('authLoginBtn');
-  const logoutBtn = document.getElementById('authLogoutBtn');
-  if (loginBtn) loginBtn.style.display = email ? 'none' : 'block';
-  if (logoutBtn) logoutBtn.style.display = email ? 'block' : 'none';
-}
-
-// ── Auth init ─────────────────────────────────────────────────────────────────
-
-async function initAuth() {
-  _supa.auth.onAuthStateChange(async (event, session) => {
-    if (session?.user) await onLogin(session.user);
-    else { _user = null; updateAuthUI(null); }
-  });
-
-  const { data: { session } } = await _supa.auth.getSession();
-  if (session?.user) await onLogin(session.user);
-
-  // Jamais d'overlay d'auth — app toujours accessible
-  document.getElementById('authOverlay').style.display = 'none';
+  // Push any local-only data that isn't in Supabase yet
+  schedulePush();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  initAuth();
-
-  // Auth form
-  document.getElementById('authSendBtn')?.addEventListener('click', async () => {
-    const email = document.getElementById('authEmail')?.value.trim();
-    if (!email) return;
-    const btn = document.getElementById('authSendBtn');
-    btn.disabled = true; btn.textContent = '…';
-    const { error } = await _supa.auth.signInWithOtp({
-      email, options: { emailRedirectTo: window.location.href }
-    });
-    if (!error) {
-      document.getElementById('authSentMsg').style.display = 'block';
-      document.getElementById('authEmail').style.display = 'none';
-      btn.style.display = 'none';
-    } else {
-      btn.disabled = false; btn.textContent = 'Envoyer le lien';
-    }
-  });
-
-  document.getElementById('authSkipBtn')?.addEventListener('click', () => {
-    document.getElementById('authOverlay').style.display = 'none';
-  });
-
-  document.getElementById('authLogoutBtn')?.addEventListener('click', async () => {
-    await _supa.auth.signOut();
-    _user = null;
-    updateAuthUI(null);
-  });
+  initSync();
 });
 
 // ── Service worker ────────────────────────────────────────────────────────────
