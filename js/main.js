@@ -858,9 +858,12 @@ async function validateAllHabits(day) {
   renderCalendarGrid();
 }
 
+let doneSectionOpen = false;
+
 function renderTodayHabits() {
   const pendingSection = document.getElementById('pendingSection');
   const doneSection = document.getElementById('doneSection');
+  const doneSectionToggle = document.getElementById('doneSectionToggle');
   const topbarValidateBtn = document.getElementById('validateAllTopbar');
   if (!pendingSection) return;
 
@@ -871,13 +874,15 @@ function renderTodayHabits() {
 
   if (!activeHabits.length) {
     pendingSection.innerHTML = '<div class="habit-card" style="justify-content:center;color:#8e8e93;font-size:15px;text-align:center;">Aucune habitude.<br>Appuie sur + pour commencer.</div>';
-    if (doneSection) doneSection.innerHTML = '';
+    if (doneSection) { doneSection.innerHTML = ''; doneSection.style.display = 'none'; }
+    if (doneSectionToggle) doneSectionToggle.style.display = 'none';
     if (topbarValidateBtn) topbarValidateBtn.style.display = 'none';
     return;
   }
 
   let pendingHtml = '';
   let doneHtml = '';
+  let doneCount = 0;
 
   const todayNorm = new Date(); todayNorm.setHours(0,0,0,0);
   const selNorm = new Date(selectedDate); selNorm.setHours(0,0,0,0);
@@ -899,7 +904,7 @@ function renderTodayHabits() {
       </div>
       <button class="habit-card-btn${isDone ? ' done-btn' : isMissed ? ' missed-btn' : ''}" data-habit="${h.id}">${isDone ? '✓' : isMissed ? '✗' : ''}</button>
     </div>`;
-    if (isDone) doneHtml += card;
+    if (isDone) { doneHtml += card; doneCount++; }
     else pendingHtml += card;
   });
 
@@ -916,7 +921,27 @@ function renderTodayHabits() {
   }
 
   pendingSection.innerHTML = pendingHtml;
-  if (doneSection) doneSection.innerHTML = doneHtml;
+
+  if (doneSectionToggle) {
+    if (doneCount === 0) {
+      doneSectionToggle.style.display = 'none';
+      if (doneSection) { doneSection.innerHTML = ''; doneSection.style.display = 'none'; }
+    } else {
+      doneSectionToggle.style.display = 'block';
+      doneSectionToggle.innerHTML = `<div class="done-toggle">
+        <div class="done-toggle-label">✓ Complétées <span class="done-toggle-count">${doneCount}</span></div>
+        <span class="done-toggle-chevron">${doneSectionOpen ? '▾' : '›'}</span>
+      </div>`;
+      if (doneSection) {
+        doneSection.style.display = doneSectionOpen ? 'block' : 'none';
+        doneSection.innerHTML = doneSectionOpen ? doneHtml : '';
+      }
+      doneSectionToggle.querySelector('.done-toggle').addEventListener('click', () => {
+        doneSectionOpen = !doneSectionOpen;
+        renderTodayHabits();
+      });
+    }
+  }
 
   document.querySelectorAll('.habit-card-btn').forEach(btn => {
     btn.addEventListener('pointerdown', e => {
